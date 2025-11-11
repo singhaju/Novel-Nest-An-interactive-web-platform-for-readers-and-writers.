@@ -11,10 +11,11 @@ import { WishlistButton } from "@/components/wishlist-button"
 import { FollowButton } from "@/components/follow-button"
 import type { Session } from "next-auth"
 
-export default async function NovelDetailPage({ params }: { params: { id: string } }) {
+export default async function NovelDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params
   const session: Session | null = await getServerSession(authOptions)
 
-  const response = await fetch(`${process.env.NEXTAUTH_URL}/api/novels/${params.id}`, {
+  const response = await fetch(`${process.env.NEXTAUTH_URL}/api/novels/${resolvedParams.id}`, {
     cache: "no-store",
   })
 
@@ -24,7 +25,7 @@ export default async function NovelDetailPage({ params }: { params: { id: string
 
   const novel = await response.json()
 
-  const episodesResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/episodes?novelId=${params.id}`, {
+  const episodesResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/episodes?novelId=${resolvedParams.id}`, {
     cache: "no-store",
   })
   const episodes = episodesResponse.ok ? await episodesResponse.json() : []
@@ -35,7 +36,7 @@ export default async function NovelDetailPage({ params }: { params: { id: string
 
   if (session?.user) {
     const likeResponse = await fetch(
-      `${process.env.NEXTAUTH_URL}/api/likes?userId=${session.user.id}&novelId=${params.id}`,
+      `${process.env.NEXTAUTH_URL}/api/likes?userId=${session.user.id}&novelId=${resolvedParams.id}`,
       { cache: "no-store" },
     )
     if (likeResponse.ok) {
@@ -44,7 +45,7 @@ export default async function NovelDetailPage({ params }: { params: { id: string
     }
 
     const wishlistResponse = await fetch(
-      `${process.env.NEXTAUTH_URL}/api/wishlist?userId=${session.user.id}&novelId=${params.id}`,
+      `${process.env.NEXTAUTH_URL}/api/wishlist?userId=${session.user.id}&novelId=${resolvedParams.id}`,
       { cache: "no-store" },
     )
     if (wishlistResponse.ok) {
@@ -93,15 +94,15 @@ export default async function NovelDetailPage({ params }: { params: { id: string
                 <span className="text-sm text-muted-foreground">Rating:</span>
                 <span className="text-sm font-medium flex items-center gap-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  {novel.rating ? novel.rating.toFixed(1) : "0.0"}
+                  {novel.rating ? Number(novel.rating).toFixed(1) : "0.0"}
                 </span>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="space-y-2">
-              <LikeButton novelId={Number(params.id)} initialLiked={hasLiked} />
-              <WishlistButton novelId={Number(params.id)} initialWishlisted={hasWishlisted} />
+              <LikeButton novelId={Number(resolvedParams.id)} initialLiked={hasLiked} />
+              <WishlistButton novelId={Number(resolvedParams.id)} initialWishlisted={hasWishlisted} />
 
               <FollowButton authorId={novel.author?.id || novel.user_id} />
               <Button variant="outline" className="w-full rounded-2xl bg-transparent">

@@ -10,6 +10,10 @@ export async function GET(request: NextRequest, context: any) {
     const rawParams = context?.params instanceof Promise ? await context.params : context?.params;
     const novelId = Number.parseInt(rawParams?.id);
 
+    // Validate novelId
+    if (isNaN(novelId)) {
+      return NextResponse.json({ error: "Invalid novel ID" }, { status: 400 })
+    }
 
     const novel = await prisma.novel.findUnique({
       where: { novel_id: novelId },
@@ -77,6 +81,12 @@ export async function GET(request: NextRequest, context: any) {
 export async function PATCH(request: NextRequest, context: any) {
   const rawParams = context?.params instanceof Promise ? await context.params : context?.params;
   const novelId = Number.parseInt(rawParams?.id);
+  
+  // Validate novelId
+  if (isNaN(novelId)) {
+    return NextResponse.json({ error: "Invalid novel ID" }, { status: 400 })
+  }
+  
   try {
     const session = await auth()
 
@@ -118,6 +128,12 @@ export async function PATCH(request: NextRequest, context: any) {
 export async function DELETE(request: NextRequest, context: any) {
   const rawParams = context?.params instanceof Promise ? await context.params : context?.params;
   const novelId = Number.parseInt(rawParams?.id);
+  
+  // Validate novelId
+  if (isNaN(novelId)) {
+    return NextResponse.json({ error: "Invalid novel ID" }, { status: 400 })
+  }
+  
   try {
     const session = await auth()
 

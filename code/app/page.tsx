@@ -5,13 +5,13 @@ import { apiClient } from "@/lib/api-client"
 import Link from "next/link"
 
 export default async function HomePage() {
-  const { novels: recommendedNovels } = await apiClient.getNovels({
-    status: "ONGOING",
+  const recommendedData = await apiClient.getNovels({
+    status: "COMPLETED",
     limit: 12,
   })
 
-  const { novels: fantasyNovels } = await apiClient.getNovels({
-    genre: "Fantasy",
+  const fantasyData = await apiClient.getNovels({
+    status: "COMPLETED",
     limit: 12,
   })
 
@@ -33,13 +33,13 @@ export default async function HomePage() {
         {/* Recommended Section */}
         <section className="mb-12">
           <h2 className="mb-6 text-2xl font-bold text-foreground">Recommended</h2>
-          <NovelGrid novels={recommendedNovels || []} />
+          <NovelGrid novels={recommendedData.novels || []} />
         </section>
 
         {/* Fantasy Section */}
         <section>
           <h2 className="mb-6 text-2xl font-bold text-foreground">Fantasy</h2>
-          <NovelGrid novels={fantasyNovels || []} />
+          <NovelGrid novels={fantasyData.novels || []} />
         </section>
       </main>
     </div>

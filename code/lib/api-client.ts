@@ -83,9 +83,8 @@ export const apiClient = {
     const res = await fetch(`${baseUrl}/api/novels?${searchParams}`, { cache: "no-store" })
     if (!res.ok) throw new Error("Failed to fetch novels")
     const data = await res.json()
-    // API returns { novels, total, limit, offset } — return the novels array to
-    // match existing callers which expect an array.
-    return data.novels ?? []
+    // API returns { novels, total, limit, offset }
+    return { novels: data.novels ?? [], total: data.total, limit: data.limit, offset: data.offset }
   },
 
   async getNovel(id: number) {

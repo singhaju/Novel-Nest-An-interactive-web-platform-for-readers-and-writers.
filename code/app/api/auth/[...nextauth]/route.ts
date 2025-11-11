@@ -1,19 +1,9 @@
-import { NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import NextAuth from "next-auth"
+import { authConfig } from "@/lib/auth"
 
-export async function GET() {
-  try {
-    const total = await prisma.novel.count()
+// NextAuth API route handler
+// Creates the dynamic route handler for all NextAuth endpoints
+const handler = NextAuth(authConfig as any)
 
-    const pending = await prisma.novel.count({
-      where: {
-        status: "PENDING_APPROVAL"
-      }
-    })
-
-    return NextResponse.json({ total, pending })
-  } catch (error) {
-    console.error("Error fetching novel stats:", error)
-    return NextResponse.json({ total: 0, pending: 0 }, { status: 500 })
-  }
-}
+export const GET = handler
+export const POST = handler

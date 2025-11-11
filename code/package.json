@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "seed": "node scripts/seed.js",
     "start": "next start"
   },
   "dependencies": {
@@ -52,10 +53,12 @@
     "clsx": "^2.1.1",
     "cmdk": "latest",
     "date-fns": "latest",
+    "dotenv": "^16.6.1",
     "embla-carousel-react": "latest",
     "googleapis": "latest",
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
+    "mysql2": "^3.15.3",
     "next": "16.0.0",
     "next-auth": "latest",
     "next-themes": "latest",

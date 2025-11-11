@@ -8,6 +8,7 @@ import { prisma } from "./prisma"
 
 // ✅ Define configuration as an object
 export const authConfig = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     // Local Credentials login
     CredentialsProvider({
