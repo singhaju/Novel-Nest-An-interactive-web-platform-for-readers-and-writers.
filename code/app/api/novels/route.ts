@@ -19,8 +19,16 @@ export async function GET(request: NextRequest) {
     const authorId = searchParams.get("authorId")
     const limit = Number.parseInt(searchParams.get("limit") || "12")
     const offset = Number.parseInt(searchParams.get("offset") || "0")
+    const scope = searchParams.get("scope")
+    const query = searchParams.get("q")?.trim()
+    const isSuggestScope = scope === "suggest"
+
+    if (isSuggestScope && !query) {
+      return NextResponse.json({ novels: [], total: 0, limit, offset })
+    }
 
     const where: any = {}
+    const andConditions: any[] = []
 
     if (status.length > 0) {
       // Prisma enum values are uppercase (see prisma/schema.prisma). Normalize
@@ -30,12 +38,72 @@ export async function GET(request: NextRequest) {
     }
 
     if (genre) {
-      where.tags = { contains: genre }
+      const normalizedGenre = genre.trim()
+      if (normalizedGenre.length > 0) {
+        where.tags = { contains: normalizedGenre }
+      }
     }
 
     if (authorId) {
       where.author_id = Number.parseInt(authorId)
     }
+
+    if (query) {
+      const normalizedQuery = query.replace(/\s+/g, " ").trim()
+      if (normalizedQuery.length > 0) {
+        const normalizedQueryLower = normalizedQuery.toLowerCase()
+        const normalizedQueryUpper = normalizedQuery.toUpperCase()
+        const queryVariants = Array.from(
+          new Set(
+            [normalizedQuery, normalizedQueryLower, normalizedQueryUpper].filter((variant): variant is string =>
+              Boolean(variant && variant.length > 0),
+            ),
+          ),
+        )
+
+        const queryConditions: any[] = []
+
+        if (isSuggestScope) {
+          for (const variant of queryVariants) {
+            queryConditions.push({ title: { startsWith: variant } })
+            queryConditions.push({ author: { is: { username: { startsWith: variant } } } })
+          }
+          for (const variant of queryVariants) {
+            if (variant.length >= 3) {
+              queryConditions.push({ title: { contains: variant } })
+              queryConditions.push({ author: { is: { username: { contains: variant } } } })
+            }
+            if (variant.length >= 4) {
+              queryConditions.push({ tags: { contains: variant } })
+            }
+          }
+        } else {
+          queryConditions.push({ title: { contains: normalizedQuery } })
+          queryConditions.push({ tags: { contains: normalizedQuery } })
+          queryConditions.push({ author: { is: { username: { contains: normalizedQuery } } } })
+          queryConditions.push({ description: { contains: normalizedQuery } })
+
+          if (normalizedQueryLower !== normalizedQuery) {
+            queryConditions.push({ title: { contains: normalizedQueryLower } })
+            queryConditions.push({ tags: { contains: normalizedQueryLower } })
+            queryConditions.push({ author: { is: { username: { contains: normalizedQueryLower } } } })
+            queryConditions.push({ description: { contains: normalizedQueryLower } })
+          }
+        }
+
+        if (queryConditions.length > 0) {
+          andConditions.push({ OR: queryConditions })
+        }
+      }
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = where.AND ? [...where.AND, ...andConditions] : andConditions
+    }
+
+    const orderBy = isSuggestScope
+      ? [{ title: "asc" as const }, { views: "desc" as const }]
+      : [{ views: "desc" as const }]
 
     const novels = await prisma.novel.findMany({
       where,
@@ -54,7 +122,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { views: "desc" },
+      orderBy,
       take: limit,
       skip: offset,
     })

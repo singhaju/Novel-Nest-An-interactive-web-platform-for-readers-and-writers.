@@ -8,26 +8,20 @@ interface NovelCardProps {
 }
 
 export function NovelCard({ novel }: NovelCardProps) {
+  const coverSrc = novel.cover_url && novel.cover_url.trim().length > 0 ? novel.cover_url : "/placeholder.svg"
+
   return (
     <Link href={`/novel/${novel.id}`} className="group">
       <div className="space-y-2">
         {/* Cover Image */}
         <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-gradient-to-br from-blue-100 to-green-100">
-          {novel.cover_url ? (
-            <Image
-              src={novel.cover_url || "/placeholder.svg"}
-              alt={novel.title}
-              fill
-              className="object-cover transition-transform group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center p-4">
-                <p className="text-lg font-bold text-foreground">Novel</p>
-                <p className="text-sm text-muted-foreground">Cover</p>
-              </div>
-            </div>
-          )}
+          <Image
+            src={coverSrc}
+            alt={novel.title}
+            fill
+            sizes="(min-width: 1024px) 200px, 40vw"
+            className="object-cover transition-transform group-hover:scale-105"
+          />
         </div>
 
         {/* Novel Info */}

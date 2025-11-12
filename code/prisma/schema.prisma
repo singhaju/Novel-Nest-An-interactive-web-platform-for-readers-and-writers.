@@ -44,6 +44,7 @@ model User {
   followers             UserFollow[]         @relation("Following")
   readingProgress       UserReadingProgress[]
   novelAuthors          NovelAuthor[]
+  likes                 NovelLike[]
 
   @@map("users")
 }
@@ -70,6 +71,7 @@ model Novel {
   wishlists   UserWishlist[]
   readingProgress UserReadingProgress[]
   novelAuthors NovelAuthor[]
+  likedBy     NovelLike[]
 
   @@index([author_id])
   @@index([status])
@@ -186,4 +188,16 @@ model UserReadingProgress {
 
   @@id([user_id, novel_id])
   @@map("user_reading_progress")
+}
+
+// Novel Likes (Bridge Table)
+model NovelLike {
+  user_id  Int
+  novel_id Int
+
+  user  User  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  novel Novel @relation(fields: [novel_id], references: [novel_id], onDelete: Cascade)
+
+  @@id([user_id, novel_id])
+  @@map("novel_likes")
 }

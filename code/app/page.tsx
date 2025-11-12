@@ -7,21 +7,27 @@ import { DiscoveryGrid } from "@/components/home/discovery-grid"
 import { ValueProps } from "@/components/home/value-props"
 import { CtaBanner } from "@/components/home/cta-banner"
 import { auth } from "@/lib/auth"
+import type { Novel } from "@/lib/types/database"
 
 export default async function HomePage() {
   const session = await auth()
 
-  const [trendingRes, freshRes, fantasyRes] = await Promise.all([
-    apiClient.getNovels({ limit: 10, status: "ONGOING" }),
-    apiClient.getNovels({ limit: 10, status: "ONGOING", offset: 10 }),
+  const [recommendedRes, trendingRes, freshRes, fantasyRes] = await Promise.all([
+    apiClient.getNovels({ limit: 12, status: "ONGOING" }),
+    apiClient.getNovels({ limit: 10, status: "ONGOING", offset: 2 }),
+    apiClient.getNovels({ limit: 10, status: "ONGOING", offset: 12 }),
     apiClient.getNovels({ limit: 8, genre: "fantasy" }),
   ])
 
-  const trendingNovels = trendingRes.novels ?? []
-  const freshUpdates = freshRes.novels ?? []
-  const fantasyCollection = fantasyRes.novels ?? []
+  const recommendedNovels = (recommendedRes.novels ?? []) as Novel[]
+  const trendingNovels = (trendingRes.novels ?? []) as Novel[]
+  const freshUpdates = (freshRes.novels ?? []) as Novel[]
+  const fantasyCollection = (fantasyRes.novels ?? []) as Novel[]
 
   const featured = trendingNovels[0]
+  const recommendedSectionNovels = (recommendedNovels.length >= 5 ? recommendedNovels : [...recommendedNovels, ...trendingNovels])
+    .filter((novel: Novel, index: number, self: Novel[]) => self.findIndex((candidate) => candidate.id === novel.id) === index)
+    .slice(0, 6)
   const discoveryItems = [
     {
       label: "Epic Fantasy",
@@ -61,10 +67,18 @@ export default async function HomePage() {
         <HeroSection
           featured={featured}
           isAuthenticated={Boolean(session?.user)}
-          stats={{ novelCount: Math.max(trendingNovels.length + freshUpdates.length, 24), writerCount: 120 }}
+          stats={{ novelCount: Math.max(recommendedNovels.length + trendingNovels.length + freshUpdates.length, 24), writerCount: 120 }}
         />
 
         <section className="container mx-auto space-y-16 px-4">
+          <NovelRail
+            title="Recommended for you"
+            description="Hand-picked stories to get you started. Updated frequently with community favourites."
+            novels={recommendedSectionNovels}
+            ctaHref="/novels?sort=recommended"
+            ctaLabel="See all recommendations"
+          />
+
           <NovelRail
             title="Trending right now"
             description="Stories readers can’t put down this week. Updated hourly based on views and likes."

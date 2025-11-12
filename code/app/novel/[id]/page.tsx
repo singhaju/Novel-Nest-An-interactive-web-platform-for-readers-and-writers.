@@ -1,12 +1,13 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { Share2, Star } from "lucide-react"
+import { Star } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { LikeButton } from "@/components/like-button"
 import { WishlistButton } from "@/components/wishlist-button"
 import { FollowButton } from "@/components/follow-button"
+import { ShareButton } from "@/components/share-button"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -24,6 +25,8 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
   if (Number.isNaN(novelId)) {
     notFound()
   }
+
+  const userId = session?.user ? Number.parseInt((session.user as any).id) : null
 
   const novel = await prisma.novel
     .update({
@@ -57,6 +60,18 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
             },
           },
         },
+        ...(userId
+          ? {
+              likedBy: {
+                where: {
+                  user_id: userId,
+                },
+                select: {
+                  user_id: true,
+                },
+              },
+            }
+          : {}),
       },
     })
     .catch(() => null)
@@ -65,7 +80,11 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
     notFound()
   }
 
-  const userId = session?.user ? Number.parseInt((session.user as any).id) : null
+  const likedByRecords = userId
+    ? ((novel as unknown as { likedBy?: { user_id: number }[] }).likedBy ?? [])
+    : []
+  const hasLiked = userId ? likedByRecords.length > 0 : false
+
   const hasWishlisted = userId
     ? Boolean(
         await prisma.userWishlist.findUnique({
@@ -127,13 +146,14 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
             </div>
 
             <div className="space-y-2">
-              <LikeButton novelId={novel.novel_id} initialLiked={false} />
+              <LikeButton
+                novelId={novel.novel_id}
+                initialLiked={hasLiked}
+                initialLikes={novel.likes ?? 0}
+              />
               <WishlistButton novelId={novel.novel_id} initialWishlisted={hasWishlisted} />
               {novel.author && <FollowButton authorId={novel.author.user_id} />}
-              <Button variant="outline" className="w-full rounded-2xl bg-transparent">
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
-              </Button>
+              <ShareButton title={novel.title} path={`/novel/${novel.novel_id}`} className="w-full rounded-2xl" />
             </div>
           </div>
 
