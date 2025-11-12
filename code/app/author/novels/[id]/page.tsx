@@ -6,7 +6,12 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
-export default async function ManageNovelPage({ params }: { params: { id: string } }) {
+type PageParams = { id: string }
+
+export default async function ManageNovelPage(
+  props: { params: PageParams } | { params: Promise<PageParams> },
+) {
+  const resolvedParams = props.params instanceof Promise ? await props.params : props.params
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
@@ -15,7 +20,11 @@ export default async function ManageNovelPage({ params }: { params: { id: string
   }
 
   const authorId = Number.parseInt((session.user as any).id)
-  const novelId = Number.parseInt(params.id)
+  const novelId = Number.parseInt(resolvedParams.id)
+
+  if (Number.isNaN(novelId)) {
+    notFound()
+  }
 
   const novel = await prisma.novel.findFirst({
     where: { novel_id: novelId, author_id: authorId },
@@ -66,7 +75,7 @@ export default async function ManageNovelPage({ params }: { params: { id: string
 
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-foreground">Episodes</h2>
-          <Link href={`/author/novels/${params.id}/chapters/create`}>
+          <Link href={`/author/novels/${resolvedParams.id}/chapters/create`}>
             <Button className="rounded-full">
               <Plus className="mr-2 h-4 w-4" />
               Add Episode
@@ -79,7 +88,7 @@ export default async function ManageNovelPage({ params }: { params: { id: string
             {novel.episodes.map((episode, index) => (
               <Link
                 key={episode.episode_id}
-                href={`/author/novels/${params.id}/chapters/${episode.episode_id}`}
+                href={`/author/novels/${resolvedParams.id}/chapters/${episode.episode_id}`}
                 className="block rounded-2xl border border-border bg-card p-6 transition-colors hover:bg-accent"
               >
                 <div className="flex items-center justify-between">
@@ -101,7 +110,7 @@ export default async function ManageNovelPage({ params }: { params: { id: string
         ) : (
           <div className="rounded-2xl border border-border bg-card p-12 text-center">
             <p className="mb-4 text-muted-foreground">No episodes yet</p>
-            <Link href={`/author/novels/${params.id}/chapters/create`}>
+            <Link href={`/author/novels/${resolvedParams.id}/chapters/create`}>
               <Button>Add First Episode</Button>
             </Link>
           </div>

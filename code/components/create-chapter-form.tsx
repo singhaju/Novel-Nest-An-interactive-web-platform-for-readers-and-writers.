@@ -7,7 +7,6 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
-import { Checkbox } from "./ui/checkbox"
 import { useRouter } from "next/navigation"
 
 interface CreateChapterFormProps {
@@ -18,7 +17,6 @@ interface CreateChapterFormProps {
 export function CreateChapterForm({ novelId, chapterNumber }: CreateChapterFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isPremium, setIsPremium] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -35,10 +33,9 @@ export function CreateChapterForm({ novelId, chapterNumber }: CreateChapterFormP
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          novel_id: novelId,
+          novelId: Number.parseInt(novelId, 10),
           title,
           content,
-          is_premium: isPremium,
         }),
       })
 
@@ -77,13 +74,6 @@ export function CreateChapterForm({ novelId, chapterNumber }: CreateChapterFormP
           required
           className="min-h-[400px] rounded-2xl font-mono"
         />
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Checkbox id="premium" checked={isPremium} onCheckedChange={(checked) => setIsPremium(checked as boolean)} />
-        <Label htmlFor="premium" className="cursor-pointer">
-          Mark as premium chapter
-        </Label>
       </div>
 
       {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}

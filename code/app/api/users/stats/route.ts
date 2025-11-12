@@ -6,9 +6,13 @@ export async function GET() {
   try {
     const session = await auth()
 
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const role = typeof (session.user as any)?.role === "string" ? (session.user as any).role.toLowerCase() : "reader"
 
-    if (!session || (role !== "admin" && role !== "developer")) {
+    if (role !== "admin" && role !== "developer") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

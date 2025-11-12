@@ -16,7 +16,7 @@
 --   `password` VARCHAR(255) NOT NULL,
 --   `profile_picture` VARCHAR(255),
 --   `bio` TEXT,
---   `role` ENUM('Reader', 'Writer', 'Admin', 'Developer') NOT NULL DEFAULT 'Reader',
+--   `role` ENUM('READER', 'WRITER', 'ADMIN', 'DEVELOPER') NOT NULL DEFAULT 'READER',
 --   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 -- );
 
@@ -26,16 +26,36 @@ CREATE TABLE IF NOT EXISTS `novels` (
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
   `cover_image` VARCHAR(255),
-  `tags` JSON,
-  `status` ENUM('Ongoing', 'Completed', 'Hiatus') NOT NULL DEFAULT 'Ongoing',
-  `last_update` TIMESTAMP,
+  `tags` TEXT,
+  `status` ENUM('ONGOING', 'COMPLETED', 'HIATUS', 'PENDING_APPROVAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  `last_update` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `views` INT DEFAULT 0,
   `likes` INT DEFAULT 0,
-  `rating` DECIMAL(3, 2),
+  `rating` DECIMAL(3, 2) DEFAULT 0,
   `author_id` INT,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`author_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL
 );
+
+-- Harmonise table definitions with Prisma schema when tables already exist
+ALTER TABLE `users`
+  MODIFY COLUMN `role` VARCHAR(32) DEFAULT 'READER';
+
+UPDATE `users` SET `role` = UPPER(`role`);
+
+ALTER TABLE `users`
+  MODIFY COLUMN `role` ENUM('READER', 'WRITER', 'ADMIN', 'DEVELOPER') NOT NULL DEFAULT 'READER';
+
+ALTER TABLE `novels`
+  MODIFY COLUMN `tags` TEXT NULL,
+  MODIFY COLUMN `status` VARCHAR(32) DEFAULT 'PENDING_APPROVAL';
+
+UPDATE `novels` SET `status` = UPPER(REPLACE(`status`, ' ', '_'));
+
+ALTER TABLE `novels`
+  MODIFY COLUMN `status` ENUM('ONGOING', 'COMPLETED', 'HIATUS', 'PENDING_APPROVAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  MODIFY COLUMN `last_update` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  MODIFY COLUMN `rating` DECIMAL(3, 2) DEFAULT 0;
 
 -- Episode table
 CREATE TABLE IF NOT EXISTS `episodes` (
@@ -123,14 +143,14 @@ CREATE TABLE IF NOT EXISTS `user_reading_progress` (
 -- Authors
 INSERT INTO `users` (`user_id`, `username`, `email`, `password`, `profile_picture`, `bio`, `role`) 
 VALUES
-(101, 'jane_austen', 'jausten@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg', 'Novelist of manners and romance.', 'Writer'),
-(102, 'frank_herbert', 'fherbert@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/3771836/pexels-photo-3771836.jpeg', 'Chronicler of Arrakis and the Golden Path.', 'Writer'),
-(103, 'jrr_tolkien', 'jrrt@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/839011/pexels-photo-839011.jpeg', 'Philologist, poet, and author of Middle-earth.', 'Writer'),
-(104, 'harper_lee', 'hlee@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/5082181/pexels-photo-5082181.jpeg', 'Chronicler of Maycomb County.', 'Writer'),
-(105, 'george_orwell', 'gorwell@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg', 'Essayist, journalist, and novelist.', 'Writer'),
+(101, 'jane_austen', 'jausten@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg', 'Novelist of manners and romance.', 'WRITER'),
+(102, 'frank_herbert', 'fherbert@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/3771836/pexels-photo-3771836.jpeg', 'Chronicler of Arrakis and the Golden Path.', 'WRITER'),
+(103, 'jrr_tolkien', 'jrrt@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/839011/pexels-photo-839011.jpeg', 'Philologist, poet, and author of Middle-earth.', 'WRITER'),
+(104, 'harper_lee', 'hlee@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/5082181/pexels-photo-5082181.jpeg', 'Chronicler of Maycomb County.', 'WRITER'),
+(105, 'george_orwell', 'gorwell@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg', 'Essayist, journalist, and novelist.', 'WRITER'),
 -- Readers
-(106, 'BookLover22', 'reader22@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg', NULL, 'Reader'),
-(107, 'Bibliophile_Ben', 'ben@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg', NULL, 'Reader')
+(106, 'BookLover22', 'reader22@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg', NULL, 'READER'),
+(107, 'Bibliophile_Ben', 'ben@example.com', '$2b$10$K/d.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1.dK1', 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg', NULL, 'READER')
 ON DUPLICATE KEY UPDATE user_id = user_id;
 
 -- ============================================================================
@@ -139,11 +159,11 @@ ON DUPLICATE KEY UPDATE user_id = user_id;
 
 INSERT INTO `novels` (`novel_id`, `title`, `description`, `cover_image`, `tags`, `status`, `last_update`, `views`, `likes`, `rating`, `author_id`) 
 VALUES
-(2001, 'Pride and Prejudice', 'A classic romance novel that follows the spirited Elizabeth Bennet as she navigates love, family, and social expectations in Regency-era England.', '/pride-prejudice-cover.jpg', JSON_ARRAY('romance', 'classic', 'regency'), 'Completed', NOW(), 150230, 12500, 4.95, 101),
-(2002, 'Dune', 'Set in the distant future, this sci-fi epic follows Paul Atreides as he becomes embroiled in the politics of the desert planet Arrakis and the struggle for the precious spice melange.', '/dune-cover.webp', JSON_ARRAY('sci-fi', 'epic', 'fantasy'), 'Completed', NOW(), 210500, 18200, 4.98, 102),
-(2003, 'The Hobbit', 'The adventure of hobbit Bilbo Baggins, who is swept into an epic quest to reclaim treasure guarded by a dragon in Middle-earth.', '/hobbit-cover.jpg', JSON_ARRAY('fantasy', 'adventure', 'classic'), 'Completed', NOW(), 320000, 25000, 4.99, 103),
-(2004, 'To Kill a Mockingbird', 'Told through the eyes of Scout Finch, this novel explores the irrationality of adult attitudes towards race and class in the American South.', '/mockingbird-cover.jpg', JSON_ARRAY('classic', 'fiction', 'southern-gothic'), 'Completed', NOW(), 180450, 15300, 4.96, 104),
-(2005, 'Nineteen Eighty-Four', 'A chilling dystopian novel set in Airstrip One, where the totalitarian Party controls every aspect of human existence through surveillance and propaganda.', '/nineteen-eighty-four-cover.jpg', JSON_ARRAY('dystopian', 'sci-fi', 'classic'), 'Completed', NOW(), 255000, 21000, 4.97, 105)
+(2001, 'Pride and Prejudice', 'A classic romance novel that follows the spirited Elizabeth Bennet as she navigates love, family, and social expectations in Regency-era England.', 'https://drive.google.com/uc?id=pride_prejudice_cover_id', '["romance", "classic", "regency"]', 'COMPLETED', NOW(), 150230, 12500, 4.95, 101),
+(2002, 'Dune', 'Set in the distant future, this sci-fi epic follows Paul Atreides as he becomes embroiled in the politics of the desert planet Arrakis and the struggle for the precious spice melange.', 'https://drive.google.com/uc?id=dune_cover_id', '["sci-fi", "epic", "fantasy"]', 'COMPLETED', NOW(), 210500, 18200, 4.98, 102),
+(2003, 'The Hobbit', 'The adventure of hobbit Bilbo Baggins, who is swept into an epic quest to reclaim treasure guarded by a dragon in Middle-earth.', 'https://drive.google.com/uc?id=hobbit_cover_id', '["fantasy", "adventure", "classic"]', 'COMPLETED', NOW(), 320000, 25000, 4.99, 103),
+(2004, 'To Kill a Mockingbird', 'Told through the eyes of Scout Finch, this novel explores the irrationality of adult attitudes towards race and class in the American South.', 'https://drive.google.com/uc?id=mockingbird_cover_id', '["classic", "fiction", "southern-gothic"]', 'COMPLETED', NOW(), 180450, 15300, 4.96, 104),
+(2005, 'Nineteen Eighty-Four', 'A chilling dystopian novel set in Airstrip One, where the totalitarian Party controls every aspect of human existence through surveillance and propaganda.', 'https://drive.google.com/uc?id=1984_cover_id', '["dystopian", "sci-fi", "classic"]', 'COMPLETED', NOW(), 255000, 21000, 4.97, 105)
 ON DUPLICATE KEY UPDATE novel_id = novel_id;
 
 -- ============================================================================
