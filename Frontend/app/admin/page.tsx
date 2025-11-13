@@ -9,7 +9,7 @@ import { Users, BookOpen, AlertCircle } from "lucide-react"
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser()
 
-  if (!user || (user.role !== "admin" && user.role !== "developer")) {
+  if (!user || user.role !== "admin") {
     redirect("/")
   }
 

@@ -22,8 +22,14 @@ export function CreateNovelForm() {
     setError(null)
     setLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    formData.set("tags", JSON.stringify([genre])) // Store genre as tags
+    if (!genre) {
+      setError("Please select a genre")
+      setLoading(false)
+      return
+    }
+
+  const formData = new FormData(e.currentTarget)
+  formData.set("tags", genre)
 
     try {
       const novel = await apiClient.createNovel(formData)

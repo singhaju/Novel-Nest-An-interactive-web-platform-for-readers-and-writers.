@@ -6,7 +6,10 @@ import { redirect } from "next/navigation"
 export default async function CreateNovelPage() {
   const user = await getCurrentUser()
 
-  if (!user || (user.role !== "author" && user.role !== "admin" && user.role !== "developer")) {
+  if (
+    !user ||
+    !["writer", "author", "admin", "developer"].includes((user.role || "reader").toLowerCase())
+  ) {
     redirect("/")
   }
 

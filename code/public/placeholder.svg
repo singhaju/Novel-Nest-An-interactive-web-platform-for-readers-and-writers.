@@ -1,0 +1,21 @@
+<svg width="400" height="540" viewBox="0 0 400 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Novel cover placeholder</title>
+  <desc id="desc">Muted gradient background with stylised book icon.</desc>
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.25" />
+      <stop offset="50%" stop-color="#9333ea" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.25" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="540" rx="24" fill="url(#gradient)" />
+  <g fill="#1f2937" fill-opacity="0.4">
+    <rect x="120" y="150" width="160" height="220" rx="12" />
+    <path d="M150 180h100v15H150z" />
+    <path d="M150 210h80v12h-80z" />
+    <path d="M150 240h70v12h-70z" />
+    <path d="M150 270h90v12h-90z" />
+  </g>
+  <circle cx="320" cy="120" r="48" fill="#2563eb" fill-opacity="0.25" />
+  <circle cx="70" cy="420" r="36" fill="#10b981" fill-opacity="0.2" />
+</svg>

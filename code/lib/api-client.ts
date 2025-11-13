@@ -72,6 +72,7 @@ export const apiClient = {
     authorId?: number
     limit?: number
     offset?: number
+    query?: string
   }) {
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.set("status", params.status)
@@ -79,8 +80,11 @@ export const apiClient = {
     if (params?.authorId) searchParams.set("authorId", params.authorId.toString())
     if (params?.limit) searchParams.set("limit", params.limit.toString())
     if (params?.offset) searchParams.set("offset", params.offset.toString())
+    if (params?.query) searchParams.set("q", params.query)
 
-    const res = await fetch(`${baseUrl}/api/novels?${searchParams}`, { cache: "no-store" })
+    const queryString = searchParams.toString()
+    const url = queryString ? `${baseUrl}/api/novels?${queryString}` : `${baseUrl}/api/novels`
+    const res = await fetch(url, { cache: "no-store" })
     if (!res.ok) throw new Error("Failed to fetch novels")
     const data = await res.json()
     // API returns { novels, total, limit, offset }

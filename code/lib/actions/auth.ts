@@ -48,6 +48,6 @@ export async function getCurrentUser() {
     id: (session.user as any).id,
     username: session.user.name,
     email: session.user.email,
-    role: (session.user as any).role,
+    role: typeof (session.user as any).role === "string" ? (session.user as any).role.toLowerCase() : "reader",
   }
 }

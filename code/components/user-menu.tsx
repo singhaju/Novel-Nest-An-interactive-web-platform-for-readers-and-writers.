@@ -31,7 +31,7 @@ export function UserMenu({ user }: UserMenuProps) {
             <Link href="/author">Author Dashboard</Link>
           </DropdownMenuItem>
         )}
-        {(user.role === "admin" || user.role === "developer") && (
+        {user.role === "admin" && (
           <DropdownMenuItem asChild>
             <Link href="/admin">Admin Dashboard</Link>
           </DropdownMenuItem>

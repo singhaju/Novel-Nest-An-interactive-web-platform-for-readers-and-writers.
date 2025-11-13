@@ -1,53 +1,64 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/server"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 
 export default async function AuthorNovelsPage() {
-  const user = await getCurrentUser()
+  const session = await auth()
+  const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!user || (user.role !== "author" && user.role !== "admin" && user.role !== "developer")) {
+  if (!session || !["writer", "admin", "developer"].includes(role)) {
     redirect("/")
   }
 
-  const supabase = await createClient()
+  const authorId = Number.parseInt((session.user as any).id)
+  const canManageAll = ["admin", "developer"].includes(role)
 
-  const { data: novels } = await supabase
-    .from("novels")
-    .select("*")
-    .eq("author_id", user.id)
-    .order("created_at", { ascending: false })
+  const novels = await prisma.novel.findMany({
+    where: canManageAll ? {} : { author_id: authorId },
+    include: {
+      author: {
+        select: {
+          username: true,
+        },
+      },
+    },
+    orderBy: { last_update: "desc" },
+  })
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Manage Novels</h1>
           <Link href="/author/novels/create">
             <Button className="rounded-full">Create New Novel</Button>
           </Link>
         </div>
 
-        {novels && novels.length > 0 ? (
+        {novels.length > 0 ? (
           <div className="space-y-4">
             {novels.map((novel) => (
               <Link
-                key={novel.id}
-                href={`/author/novels/${novel.id}`}
-                className="block rounded-2xl border border-border bg-card p-6 hover:bg-accent transition-colors"
+                key={novel.novel_id}
+                href={`/author/novels/${novel.novel_id}`}
+                className="block rounded-2xl border border-border bg-card p-6 transition-colors hover:bg-accent"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-lg mb-2">{novel.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="capitalize">{novel.status}</span>
-                      <span>{novel.total_views} views</span>
-                      <span>{novel.total_likes} likes</span>
-                      <span>Rating: {novel.rating.toFixed(1)}</span>
+                    <h3 className="mb-2 text-lg font-semibold">{novel.title}</h3>
+                    {canManageAll && novel.author?.username && (
+                      <p className="text-sm text-muted-foreground">Author: {novel.author.username}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                      <span className="capitalize">{novel.status.toLowerCase()}</span>
+                      <span>{(novel.views ?? 0).toLocaleString()} views</span>
+                      <span>{(novel.likes ?? 0).toLocaleString()} likes</span>
+                      <span>Rating: {Number(novel.rating ?? 0).toFixed(1)}</span>
                     </div>
                   </div>
                   <Button variant="outline">Manage</Button>
@@ -57,7 +68,7 @@ export default async function AuthorNovelsPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card p-12 text-center">
-            <p className="text-muted-foreground mb-4">You haven't created any novels yet</p>
+            <p className="mb-4 text-muted-foreground">You haven't created any novels yet</p>
             <Link href="/author/novels/create">
               <Button>Create Your First Novel</Button>
             </Link>

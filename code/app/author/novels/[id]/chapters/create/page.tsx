@@ -1,45 +1,53 @@
 import { Header } from "@/components/header"
 import { CreateChapterForm } from "@/components/create-chapter-form"
-import { getCurrentUser } from "@/lib/actions/auth"
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { redirect, notFound } from "next/navigation"
 
-export default async function CreateChapterPage({ params }: { params: { id: string } }) {
-  const user = await getCurrentUser()
+type PageParams = { id: string }
 
-  if (!user || (user.role !== "author" && user.role !== "admin" && user.role !== "developer")) {
+export default async function CreateChapterPage(
+  props: { params: PageParams } | { params: Promise<PageParams> },
+) {
+  const resolvedParams = props.params instanceof Promise ? await props.params : props.params
+  const session = await auth()
+  const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
+
+  if (!session || !["writer", "admin", "developer"].includes(role)) {
     redirect("/")
   }
 
-  const supabase = await createClient()
+  const userId = Number.parseInt((session.user as any).id)
+  const novelId = Number.parseInt(resolvedParams.id)
 
-  const { data: novel } = await supabase
-    .from("novels")
-    .select("title")
-    .eq("id", params.id)
-    .eq("author_id", user.id)
-    .single()
+  if (Number.isNaN(novelId)) {
+    notFound()
+  }
+
+  const canManageAll = ["admin", "developer"].includes(role)
+
+  const novel = await prisma.novel.findFirst({
+    where: canManageAll ? { novel_id: novelId } : { novel_id: novelId, author_id: userId },
+    select: {
+      title: true,
+    },
+  })
 
   if (!novel) {
     notFound()
   }
 
-  // Get next chapter number
-  const { count } = await supabase
-    .from("chapters")
-    .select("*", { count: "exact", head: true })
-    .eq("novel_id", params.id)
-
-  const nextChapterNumber = (count || 0) + 1
+  const episodeCount = await prisma.episode.count({ where: { novel_id: novelId } })
+  const nextChapterNumber = episodeCount + 1
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Add New Chapter</h1>
-        <p className="text-muted-foreground mb-8">{novel.title}</p>
-        <CreateChapterForm novelId={params.id} chapterNumber={nextChapterNumber} />
+        <h1 className="mb-2 text-3xl font-bold text-foreground">Add New Episode</h1>
+        <p className="mb-8 text-muted-foreground">{novel.title}</p>
+        <CreateChapterForm novelId={resolvedParams.id} chapterNumber={nextChapterNumber || 1} />
       </main>
     </div>
   )

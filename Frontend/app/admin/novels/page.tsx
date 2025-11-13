@@ -8,7 +8,7 @@ import Link from "next/link"
 export default async function AdminNovelsPage() {
   const user = await getCurrentUser()
 
-  if (!user || (user.role !== "admin" && user.role !== "developer")) {
+  if (!user || user.role !== "admin") {
     redirect("/")
   }
 

@@ -1,9 +1,14 @@
 import Link from "next/link"
-import { Search, Star, BarChart3, User } from "lucide-react"
+import { Star, BarChart3, User } from "lucide-react"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { UserMenu } from "./user-menu"
+import { SearchBar } from "./search-bar"
 
-export async function Header() {
+interface HeaderProps {
+  initialQuery?: string
+}
+
+export async function Header({ initialQuery }: HeaderProps = {}) {
   const user = await getCurrentUser()
 
   return (
@@ -18,19 +23,15 @@ export async function Header() {
         </Link>
 
         {/* Search Bar */}
-        <div className="relative flex-1 max-w-2xl">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search novels..."
-            className="w-full rounded-full bg-muted px-12 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+        <SearchBar initialQuery={initialQuery} />
 
         {/* Right Icons */}
         <div className="flex items-center gap-4">
           {user && (user.role === "admin" || user.role === "developer") && (
-            <Link href="/admin" className="text-foreground hover:text-muted-foreground">
+            <Link
+              href={user.role === "admin" ? "/admin" : "/developer"}
+              className="text-foreground hover:text-muted-foreground"
+            >
               <BarChart3 className="h-6 w-6" />
             </Link>
           )}

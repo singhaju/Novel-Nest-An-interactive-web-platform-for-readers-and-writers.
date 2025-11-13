@@ -9,7 +9,8 @@ export default async function AdminDashboardPage() {
   // ✅ 1. Protect admin page using new helper
   const session = await auth()
 
-  if (!session || (session.user.role !== "Admin" && session.user.role !== "Developer")) {
+  const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
+  if (!session || role !== "admin") {
     redirect("/")
   }
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Button } from "./ui/button"
-import { Bookmark } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api-client"
@@ -44,7 +43,6 @@ export function WishlistButton({ novelId, initialWishlisted }: WishlistButtonPro
       variant={wishlisted ? "default" : "outline"}
       className="w-full rounded-2xl"
     >
-      <Bookmark className={`mr-2 h-4 w-4 ${wishlisted ? "fill-current" : ""}`} />
       {wishlisted ? "In Wishlist" : "Wishlist"}
     </Button>
   )

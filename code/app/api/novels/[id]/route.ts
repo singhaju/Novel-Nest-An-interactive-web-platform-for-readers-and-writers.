@@ -105,10 +105,12 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
 
-    const userRole = (session.user as any).role
+    const userRoleRaw = (session.user as any).role
     const userId = Number.parseInt((session.user as any).id)
 
-    if (novel.author_id !== userId && userRole !== "ADMIN") {
+    const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
+
+    if (novel.author_id !== userId && !["admin", "developer"].includes(userRole)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -150,10 +152,12 @@ export async function DELETE(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
 
-    const userRole = (session.user as any).role
+    const userRoleRaw = (session.user as any).role
     const userId = Number.parseInt((session.user as any).id)
 
-    if (novel.author_id !== userId && userRole !== "ADMIN") {
+    const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
+
+    if (novel.author_id !== userId && !["admin", "developer"].includes(userRole)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

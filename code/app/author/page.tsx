@@ -1,62 +1,65 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { BookOpen, FileText, Eye } from "lucide-react"
-import type { Session } from "next-auth"
 
 export default async function AuthorDashboardPage() {
-  const session: Session | null = await getServerSession(authOptions)
+  const session = await auth()
 
-
-  if (
-    !session ||
-    (session.user.role !== "Writer" && session.user.role !== "Admin" && session.user.role !== "Developer")
-  ) {
+  const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
+  if (!session || !["writer", "admin", "developer"].includes(role)) {
     redirect("/")
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+  const authorId = Number.parseInt((session.user as any).id)
 
-const novelsRes = await fetch(`${baseUrl}/api/novels?authorId=${session.user.id}`, {
-  cache: "no-store",
-})
+  const novels = await prisma.novel.findMany({
+    where: { author_id: authorId },
+    include: {
+      _count: { select: { episodes: true } },
+    },
+    orderBy: { last_update: "desc" },
+  })
 
-  const novels = novelsRes.ok ? await novelsRes.json() : []
+  const totalEpisodes = novels.reduce((sum, novel) => sum + (novel._count?.episodes ?? 0), 0)
+  const totalViews = novels.reduce((sum, novel) => sum + (novel.views ?? 0), 0)
 
-  // Calculate stats
-  const totalEpisodes = novels.reduce((sum: number, novel: any) => sum + (novel._count?.episodes || 0), 0)
-  const totalViews = novels.reduce((sum: number, novel: any) => sum + (novel.views || 0), 0)
+  const recentNovels = novels.slice(0, 6).map((novel) => ({
+    id: novel.novel_id,
+    title: novel.title,
+    status: novel.status.toLowerCase(),
+    views: novel.views ?? 0,
+  }))
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Author Dashboard</h1>
+        <h1 className="mb-8 text-3xl font-bold text-foreground">Author Dashboard</h1>
 
-        {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-3 mb-12">
+        <div className="mb-12 grid gap-6 md:grid-cols-3">
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <BookOpen className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-sm font-medium text-muted-foreground">Total Novels</h3>
             </div>
-            <p className="text-4xl font-bold">{novels?.length || 0}</p>
+            <p className="text-4xl font-bold">{novels.length}</p>
           </div>
 
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <FileText className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-sm font-medium text-muted-foreground">Total Episodes</h3>
             </div>
-            <p className="text-4xl font-bold">{totalEpisodes || 0}</p>
+            <p className="text-4xl font-bold">{totalEpisodes}</p>
           </div>
 
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <Eye className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-sm font-medium text-muted-foreground">Total Views</h3>
             </div>
@@ -64,51 +67,49 @@ const novelsRes = await fetch(`${baseUrl}/api/novels?authorId=${session.user.id}
           </div>
         </div>
 
-        {/* Quick Actions */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
+          <h2 className="mb-6 text-2xl font-bold text-foreground">Quick Actions</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <Link href="/author/novels/create">
-              <Button className="w-full h-24 rounded-3xl text-lg">Create New Novel</Button>
+              <Button className="h-24 w-full rounded-3xl text-lg">Create New Novel</Button>
             </Link>
             <Link href="/author/novels">
-              <Button variant="outline" className="w-full h-24 rounded-3xl text-lg bg-transparent">
-                Manage Novel
+              <Button variant="outline" className="h-24 w-full rounded-3xl bg-transparent text-lg">
+                Manage Novels
               </Button>
             </Link>
           </div>
         </section>
 
-        {/* Your Novels */}
         <section>
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-foreground">Your Novels</h2>
             <Link href="/author/novels">
               <Button variant="outline" className="rounded-full bg-transparent">
-                view all
+                View all
               </Button>
             </Link>
           </div>
 
-          {novels && novels.length > 0 ? (
+          {recentNovels.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {novels.slice(0, 6).map((novel: any) => (
+              {recentNovels.map((novel) => (
                 <Link
                   key={novel.id}
                   href={`/author/novels/${novel.id}`}
-                  className="rounded-2xl border border-border bg-card p-6 hover:bg-accent transition-colors"
+                  className="rounded-2xl border border-border bg-card p-6 transition-colors hover:bg-accent"
                 >
-                  <h3 className="font-semibold text-lg mb-2">{novel.title}</h3>
+                  <h3 className="mb-2 text-lg font-semibold">{novel.title}</h3>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="capitalize">{novel.status}</span>
-                    <span>{novel.views} views</span>
+                    <span>{novel.views.toLocaleString()} views</span>
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-card p-12 text-center">
-              <p className="text-muted-foreground mb-4">You haven't created any novels yet</p>
+              <p className="mb-4 text-muted-foreground">You haven't created any novels yet</p>
               <Link href="/author/novels/create">
                 <Button>Create Your First Novel</Button>
               </Link>

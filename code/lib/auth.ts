@@ -40,11 +40,13 @@ export const authConfig = {
           throw new Error("Invalid credentials")
         }
 
+        const normalizedRole = typeof user.role === "string" ? user.role.toLowerCase() : "reader"
+
         return {
           id: user.user_id.toString(),
           email: user.email,
           name: user.username,
-          role: user.role,
+          role: normalizedRole,
         }
       },
     }),
@@ -60,14 +62,17 @@ export const authConfig = {
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id
-        token.role = user.role
+        token.role = typeof user.role === "string" ? user.role.toLowerCase() : token.role ?? "reader"
+      }
+      if (token.role && typeof token.role === "string") {
+        token.role = token.role.toLowerCase()
       }
       return token
     },
     async session({ session, token }: any) {
       if (session.user) {
         session.user.id = token.id
-        session.user.role = token.role
+        session.user.role = typeof token.role === "string" ? token.role.toLowerCase() : "reader"
       }
       return session
     },

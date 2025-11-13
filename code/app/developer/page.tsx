@@ -1,167 +1,148 @@
 import { Header } from "@/components/header"
-import { createClient } from "@/lib/supabase/server"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { Database, HardDrive, Activity, Users } from "lucide-react"
 
 export default async function DeveloperDashboardPage() {
-  const user = await getCurrentUser()
+  const session = await auth()
+  const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!user || user.role !== "developer") {
+  if (!session || role !== "developer") {
     redirect("/")
   }
 
-  const supabase = await createClient()
+  const [novelCount, episodeCount, commentCount, userCount] = await Promise.all([
+    prisma.novel.count(),
+    prisma.episode.count(),
+    prisma.comment.count(),
+    prisma.user.count(),
+  ])
 
-  // Fetch database stats
-  const { count: totalRecords } = await supabase.from("novels").select("*", { count: "exact", head: true })
+  const totalRecords = novelCount + episodeCount + commentCount + userCount
 
-  const { count: totalTransactions } = await supabase
-    .from("purchased_episodes")
-    .select("*", { count: "exact", head: true })
-
-  const { count: userContent } = await supabase.from("comments").select("*", { count: "exact", head: true })
+  const recentNovels = await prisma.novel.findMany({
+    orderBy: { created_at: "desc" },
+    take: 5,
+    select: {
+      novel_id: true,
+      title: true,
+      status: true,
+      created_at: true,
+    },
+  })
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Developer Dashboard</h1>
+        <h1 className="mb-8 text-3xl font-bold text-foreground">Developer Dashboard</h1>
 
-        {/* Top Stats */}
-        <div className="grid gap-6 md:grid-cols-4 mb-8">
+        <div className="mb-8 grid gap-6 md:grid-cols-4">
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <Database className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-sm font-medium text-muted-foreground">Database Size</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Catalog Size</h3>
             </div>
-            <p className="text-3xl font-bold">0.7TB</p>
+            <p className="text-3xl font-bold">{novelCount.toLocaleString()} novels</p>
           </div>
 
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <HardDrive className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-sm font-medium text-muted-foreground">Total Records</h3>
             </div>
-            <p className="text-3xl font-bold">{totalRecords || 0}</p>
+            <p className="text-3xl font-bold">{totalRecords.toLocaleString()}</p>
           </div>
 
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <Activity className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-sm font-medium text-muted-foreground">Transactions</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Published Episodes</h3>
             </div>
-            <p className="text-3xl font-bold">{totalTransactions?.toLocaleString() || 0}</p>
+            <p className="text-3xl font-bold">{episodeCount.toLocaleString()}</p>
           </div>
 
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="mb-2 flex items-center gap-3">
               <Users className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-sm font-medium text-muted-foreground">User Content</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Registered Users</h3>
             </div>
-            <p className="text-3xl font-bold">{userContent?.toLocaleString() || 0}</p>
+            <p className="text-3xl font-bold">{userCount.toLocaleString()}</p>
           </div>
         </div>
 
-        {/* Server Metrics */}
-        <div className="rounded-3xl border-2 border-border bg-card p-8 mb-8">
-          <h2 className="text-2xl font-bold mb-6">Server Metrics</h2>
-          <div className="grid gap-6 md:grid-cols-3 mb-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">CPU Usage</span>
-                <span className="text-sm font-bold">53.1%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-foreground" style={{ width: "53.1%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Memory Usage</span>
-                <span className="text-sm font-bold">75.6%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-foreground" style={{ width: "75.6%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Disk Usage</span>
-                <span className="text-sm font-bold">19.7%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-foreground" style={{ width: "19.7%" }} />
-              </div>
-            </div>
+        <div className="mb-8 rounded-3xl border-2 border-border bg-card p-8">
+          <h2 className="mb-6 text-2xl font-bold">Platform Health</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[{ label: "CPU Usage", value: 42.3 }, { label: "Memory Usage", value: 68.4 }, { label: "Disk Usage", value: 27.1 }].map(
+              (metric) => (
+                <div key={metric.label}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-medium">{metric.label}</span>
+                    <span className="text-sm font-bold">{metric.value}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full bg-foreground" style={{ width: `${metric.value}%` }} />
+                  </div>
+                </div>
+              ),
+            )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3 text-sm">
+          <div className="mt-6 grid gap-4 text-sm md:grid-cols-3">
             <div>
-              <p className="text-muted-foreground mb-1">Active Connections</p>
-              <p className="text-2xl font-bold">570</p>
+              <p className="mb-1 text-muted-foreground">Active Connections</p>
+              <p className="text-2xl font-bold">512</p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-1">Request/Minute</p>
-              <p className="text-2xl font-bold">1,277</p>
+              <p className="mb-1 text-muted-foreground">Requests / minute</p>
+              <p className="text-2xl font-bold">1,204</p>
             </div>
             <div>
-              <p className="text-muted-foreground mb-1">Uptime</p>
-              <p className="text-2xl font-bold">15 days, 23 hours</p>
+              <p className="mb-1 text-muted-foreground">Uptime</p>
+              <p className="text-2xl font-bold">21 days, 4 hours</p>
             </div>
           </div>
         </div>
 
-        {/* Management Sections */}
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4 underline">System Monitoring</h3>
-            <div className="space-y-3">
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                System Logs
-              </button>
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Audit Logs
-              </button>
-            </div>
+            <h3 className="mb-4 text-lg font-semibold underline">Recent Deployments</h3>
+            <ul className="space-y-3 text-sm">
+              {recentNovels.map((novel) => (
+                <li key={novel.novel_id} className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
+                  <div>
+                    <p className="font-medium">{novel.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Added {novel.created_at ? new Date(novel.created_at).toLocaleDateString() : "recently"}
+                    </p>
+                  </div>
+                  <span className="text-xs uppercase text-muted-foreground">{novel.status.toLowerCase()}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4 underline">Database</h3>
-            <div className="space-y-3">
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Database Explorer
-              </button>
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Backup & Restore
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4 underline">Security</h3>
-            <div className="space-y-3">
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Security Settings
-              </button>
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Audit Trails
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border-2 border-border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-4 underline">Features</h3>
-            <div className="space-y-3">
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Feature Flags
-              </button>
-              <button className="w-full rounded-3xl border border-border bg-background px-6 py-3 text-sm hover:bg-accent transition-colors">
-                Configuration
-              </button>
+            <h3 className="mb-4 text-lg font-semibold underline">Tools</h3>
+            <div className="grid gap-3 text-sm">
+              {[
+                "System Logs",
+                "Audit Trail",
+                "Database Explorer",
+                "Feature Flags",
+                "Background Jobs",
+                "Environment Keys",
+              ].map((tool) => (
+                <button
+                  key={tool}
+                  className="rounded-3xl border border-border bg-background px-6 py-3 text-left transition-colors hover:bg-accent"
+                >
+                  {tool}
+                </button>
+              ))}
             </div>
           </div>
         </div>
