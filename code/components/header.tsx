@@ -28,7 +28,10 @@ export async function Header({ initialQuery }: HeaderProps = {}) {
         {/* Right Icons */}
         <div className="flex items-center gap-4">
           {user && (user.role === "admin" || user.role === "developer") && (
-            <Link href="/admin" className="text-foreground hover:text-muted-foreground">
+            <Link
+              href={user.role === "admin" ? "/admin" : "/developer"}
+              className="text-foreground hover:text-muted-foreground"
+            >
               <BarChart3 className="h-6 w-6" />
             </Link>
           )}

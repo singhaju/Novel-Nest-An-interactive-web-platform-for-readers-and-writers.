@@ -2,6 +2,7 @@ import { Header } from "@/components/header"
 import { NovelGrid } from "@/components/novel-grid"
 import { apiClient } from "@/lib/api-client"
 import type { Novel } from "@/lib/types/database"
+import { normalizeTag, slugify, formatTagLabel } from "@/lib/tags"
 
 const MAX_PER_CATEGORY = 12
 const TAG_PRIORITY = [
@@ -21,41 +22,7 @@ const TAG_PRIORITY = [
   "young adult",
 ]
 
-const TAG_ALIASES: Record<string, string> = {
-  "sci fi": "science fiction",
-  "sci-fi": "science fiction",
-  "science-fiction": "science fiction",
-  "lit rpg": "litrpg",
-  "lit-rpg": "litrpg",
-  "young-adult": "young adult",
-  ya: "young adult",
-}
-
-const TAG_DISPLAY_OVERRIDES: Record<string, string> = {
-  "science fiction": "Science Fiction",
-  litrpg: "LitRPG",
-  "slice of life": "Slice of Life",
-  "young adult": "Young Adult",
-}
-
 type NovelWithAuthor = Novel & { author?: { username: string } }
-
-function normalizeTag(raw: string): string | null {
-  if (!raw) return null
-  let normalized = raw
-    .toLowerCase()
-    .replace(/[\[\]"]+/g, "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-
-  if (!normalized) {
-    return null
-  }
-
-  normalized = TAG_ALIASES[normalized] ?? normalized
-  return normalized
-}
 
 function extractNormalizedTags(tagField?: string): string[] {
   if (!tagField) return []
@@ -68,17 +35,7 @@ function extractNormalizedTags(tagField?: string): string[] {
   return Array.from(new Set(parsed))
 }
 
-function formatTagLabel(tag: string): string {
-  if (TAG_DISPLAY_OVERRIDES[tag]) {
-    return TAG_DISPLAY_OVERRIDES[tag]
-  }
-
-  return tag
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
+// We use the shared `formatTagLabel` imported from lib/tags
 
 function groupNovelsByTag(novels: NovelWithAuthor[]) {
   const buckets = new Map<string, { label: string; novels: NovelWithAuthor[] }>()
@@ -192,17 +149,22 @@ export default async function NovelsPage({ searchParams }: NovelsPageProps) {
             </section>
 
             {shouldShowTagSections ? (
-              sections.map((section) => (
-                <section key={section.value} className="space-y-4">
-                  <div className="flex items-baseline justify-between">
-                    <h2 className="text-2xl font-semibold text-foreground">{section.label}</h2>
-                    <span className="text-sm text-muted-foreground">
-                      {section.novels.length} {section.novels.length === 1 ? "story" : "stories"}
-                    </span>
-                  </div>
-                  <NovelGrid novels={section.novels} />
-                </section>
-              ))
+              sections.map((section) => {
+                // create a slug id for the section so other pages can link to it
+                const slug = slugify(section.value)
+
+                return (
+                  <section key={section.value} id={slug} className="space-y-4">
+                    <div className="flex items-baseline justify-between">
+                      <h2 className="text-2xl font-semibold text-foreground">{section.label}</h2>
+                      <span className="text-sm text-muted-foreground">
+                        {section.novels.length} {section.novels.length === 1 ? "story" : "stories"}
+                      </span>
+                    </div>
+                    <NovelGrid novels={section.novels} />
+                  </section>
+                )
+              })
             ) : (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
                 We couldn't find any tagged collections just yet. Publish or tag a story to get started.

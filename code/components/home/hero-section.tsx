@@ -1,4 +1,5 @@
 import Link from "next/link"
+import AuthWarningLink from "@/components/auth-warning-link"
 import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Novel } from "@/lib/types/database"
@@ -10,9 +11,11 @@ interface HeroSectionProps {
     writerCount: number
   }
   isAuthenticated: boolean
+  role?: string | null
+  personalizedNovels?: Novel[] | null
 }
 
-export function HeroSection({ featured, stats, isAuthenticated }: HeroSectionProps) {
+export function HeroSection({ featured, stats, isAuthenticated, role, personalizedNovels }: HeroSectionProps) {
   const headline = "Read. Write. Share."
   const subheading =
     "Follow immersive stories from emerging voices across every genre and publish your own adventures with a single click."
@@ -22,6 +25,11 @@ export function HeroSection({ featured, stats, isAuthenticated }: HeroSectionPro
   const startReadingHref = isAuthenticated
     ? "/novels"
     : `/auth/login?callbackUrl=${encodeURIComponent("/novels")}`
+
+  const becomeCreatorHref =
+    isAuthenticated && (role === "writer" || role === "author")
+      ? "/author/novels/create"
+      : `/auth/login?callbackUrl=${encodeURIComponent("/author/novels/create")}`
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-foreground/5 via-background to-background">
@@ -42,16 +50,31 @@ export function HeroSection({ featured, stats, isAuthenticated }: HeroSectionPro
 
           <div className="flex flex-wrap items-center gap-4">
             <Button asChild size="lg">
-              <Link href={startReadingHref}>
-                Start Reading
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+              {isAuthenticated ? (
+                <Link href={startReadingHref}>
+                  Start Reading
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              ) : (
+                <AuthWarningLink href={startReadingHref} className="flex items-center">
+                  Start Reading
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </AuthWarningLink>
+              )}
             </Button>
+
             <Button variant="outline" asChild size="lg">
-              <Link href="/author">
-                Become a Creator
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+              {isAuthenticated && (role === "writer" || role === "author") ? (
+                <Link href={becomeCreatorHref}>
+                  Become a Creator
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              ) : (
+                <AuthWarningLink href={becomeCreatorHref} className="flex items-center">
+                  Become a Creator
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </AuthWarningLink>
+              )}
             </Button>
           </div>
 
@@ -77,9 +100,62 @@ export function HeroSection({ featured, stats, isAuthenticated }: HeroSectionPro
 
           <div className="relative space-y-6">
             <p className="text-sm uppercase tracking-wide text-primary">Featured Story</p>
-            {featured ? (
+            {personalizedNovels && personalizedNovels.length > 0 ? (
               <div className="space-y-4">
-                <h2 className="text-2xl font-semibold text-foreground">{featured.title}</h2>
+                <h2 className="text-2xl font-semibold text-foreground">For you</h2>
+                {personalizedNovels.map((novel, idx) => {
+                  const id = (novel as any).novel_id ?? (novel as any).id ?? idx
+                  const title = (novel as any).title ?? (novel as any).name ?? "Untitled"
+                  const desc = (novel as any).description ?? (novel as any).summary ?? ""
+                  const reads = (novel as any).total_views ?? (novel as any).views ?? 0
+                  const authorName = (novel as any).author?.username ?? (novel as any).author?.name ?? "Unknown"
+
+                  return (
+                    <div key={`${id}-${idx}`} className="space-y-2">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        <Link
+                          href={
+                            isAuthenticated
+                              ? `/novel/${id}`
+                              : `/auth/login?callbackUrl=${encodeURIComponent(`/novel/${id}`)}`
+                          }
+                          className="hover:underline"
+                        >
+                          {title}
+                        </Link>
+                      </h3>
+                      <p className="line-clamp-3 text-sm text-muted-foreground">{desc}</p>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>{reads} reads</span>
+                        <span>{authorName}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div>
+                  <Button asChild variant="ghost">
+                    {/* Link to profile page's Following Authors section */}
+                    <Link href="/profile#following-authors">
+                      See your followed authors
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ) : featured ? (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  <Link
+                    href={
+                      isAuthenticated
+                        ? `/novel/${featured.id}`
+                        : `/auth/login?callbackUrl=${encodeURIComponent(`/novel/${featured.id}`)}`
+                    }
+                    className="hover:underline"
+                  >
+                    {featured.title}
+                  </Link>
+                </h2>
                 <p className="line-clamp-4 text-sm text-muted-foreground">
                   {featured.summary || "A fresh story selected by our editors. Dive into a world loved by thousands of readers."}
                 </p>

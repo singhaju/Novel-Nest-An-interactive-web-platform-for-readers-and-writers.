@@ -7,7 +7,7 @@ import Link from "next/link"
 export default async function AdminManagementPage() {
   const user = await getCurrentUser()
 
-  if (!user || (user.role !== "admin" && user.role !== "developer")) {
+  if (!user || user.role !== "admin") {
     redirect("/")
   }
 

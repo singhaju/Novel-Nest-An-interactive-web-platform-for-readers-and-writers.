@@ -160,7 +160,19 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
           <div className="space-y-6">
             <div>
               <h1 className="mb-2 text-3xl font-bold text-foreground">{novel.title}</h1>
-              <p className="text-muted-foreground">Author {novel.author?.username ?? "Unknown"}</p>
+              <p className="text-muted-foreground">
+                Author{" "}
+                {novel.author ? (
+                  <Link
+                    href={`/author/${novel.author.user_id}`}
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    {novel.author.username}
+                  </Link>
+                ) : (
+                  "Unknown"
+                )}
+              </p>
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-6">

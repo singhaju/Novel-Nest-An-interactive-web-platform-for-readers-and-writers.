@@ -1,8 +1,17 @@
 import Link from "next/link"
+import AuthWarningLink from "@/components/auth-warning-link"
 import { ArrowRight, PenTool } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export function CtaBanner() {
+interface CtaBannerProps {
+  isAuthenticated: boolean
+  role?: string | null
+}
+
+export function CtaBanner({ isAuthenticated, role }: CtaBannerProps) {
+  const createHref = "/author/novels/create"
+  const href = isAuthenticated && (role === "writer" || role === "author") ? createHref : `/auth/login?callbackUrl=${encodeURIComponent(createHref)}`
+
   return (
     <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 p-10">
       <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/30 blur-3xl" />
@@ -20,10 +29,17 @@ export function CtaBanner() {
           </p>
         </div>
         <Button asChild size="lg" className="w-fit">
-          <Link href="/author/new">
-            Start writing today
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+          {isAuthenticated && (role === "writer" || role === "author") ? (
+            <Link href={href}>
+              Start writing today
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          ) : (
+            <AuthWarningLink href={href} className="flex items-center">
+              Start writing today
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </AuthWarningLink>
+          )}
         </Button>
       </div>
     </section>

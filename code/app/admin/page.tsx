@@ -10,7 +10,7 @@ export default async function AdminDashboardPage() {
   const session = await auth()
 
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
-  if (!session || (role !== "admin" && role !== "developer")) {
+  if (!session || role !== "admin") {
     redirect("/")
   }
 
