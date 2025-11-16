@@ -6,9 +6,9 @@ import { ApproveNovelButton } from "@/components/approve-novel-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { getFileFromGoogleDrive } from "@/lib/google-drive"
 import { normalizeCoverImageUrl } from "@/lib/utils"
+import { getNovelSubmissionDetail } from "@/lib/repositories/novels"
 
 async function resolveEpisodeContent(raw: string | null): Promise<string> {
   if (!raw) return ""
@@ -45,38 +45,20 @@ export default async function PendingNovelReviewPage(
     notFound()
   }
 
-  const novel = await prisma.novel.findUnique({
-    where: { novel_id: novelId },
-    include: {
-      author: {
-        select: {
-          username: true,
-          bio: true,
-        },
-      },
-      episodes: {
-        orderBy: { episode_id: "asc" },
-        select: {
-          episode_id: true,
-          title: true,
-          content: true,
-          release_date: true,
-        },
-      },
-    },
-  })
+  const submission = await getNovelSubmissionDetail(novelId)
 
-  if (!novel || novel.status !== "PENDING_APPROVAL") {
+  if (!submission || submission.novel.status !== "PENDING_APPROVAL") {
     notFound()
   }
 
   const episodesWithContent = await Promise.all(
-    novel.episodes.map(async (episode) => ({
+    submission.episodes.map(async (episode) => ({
       ...episode,
       resolvedContent: await resolveEpisodeContent(episode.content),
     })),
   )
 
+  const novel = submission.novel
   const coverSrc = normalizeCoverImageUrl(novel.cover_image) ?? undefined
 
   return (

@@ -1,11 +1,11 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Users, BookOpen, AlertCircle } from "lucide-react"
+import { getNovelCounts, getUserCount } from "@/lib/repositories/stats"
 
 export default async function AdminDashboardPage() {
   // ✅ 1. Protect admin page using new helper
@@ -16,11 +16,10 @@ export default async function AdminDashboardPage() {
     redirect("/")
   }
 
-  const [totalUsers, totalNovels, pendingNovels] = await Promise.all([
-    prisma.user.count(),
-    prisma.novel.count(),
-    prisma.novel.count({ where: { status: "PENDING_APPROVAL" } }),
-  ])
+  const [userCount, novelCounts] = await Promise.all([getUserCount(), getNovelCounts()])
+  const totalUsers = userCount
+  const totalNovels = novelCounts.total
+  const pendingNovels = novelCounts.pending
 
   const hasPending = pendingNovels > 0
 

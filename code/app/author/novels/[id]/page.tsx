@@ -1,7 +1,7 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { getNovelDetail } from "@/lib/repositories/novels"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { Plus } from "lucide-react"
@@ -28,23 +28,17 @@ export default async function ManageNovelPage(
 
   const canManageAll = ["developer", "superadmin"].includes(role)
 
-  const novel = await prisma.novel.findFirst({
-    where: canManageAll ? { novel_id: novelId } : { novel_id: novelId, author_id: authorId },
-    include: {
-      episodes: {
-        orderBy: { episode_id: "asc" },
-        select: {
-          episode_id: true,
-          title: true,
-          release_date: true,
-        },
-      },
-    },
-  })
-
-  if (!novel) {
+  const detail = await getNovelDetail(novelId)
+  if (!detail) {
     notFound()
   }
+
+  if (!canManageAll && detail.novel.author_id !== authorId) {
+    notFound()
+  }
+
+  const novel = detail.novel
+  const episodes = detail.episodes
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,7 +53,7 @@ export default async function ManageNovelPage(
         <div className="mb-8 grid gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="mb-1 text-sm text-muted-foreground">Episodes</p>
-            <p className="text-2xl font-bold">{novel.episodes.length}</p>
+            <p className="text-2xl font-bold">{episodes.length}</p>
           </div>
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="mb-1 text-sm text-muted-foreground">Views</p>
@@ -85,9 +79,9 @@ export default async function ManageNovelPage(
           </Link>
         </div>
 
-        {novel.episodes.length > 0 ? (
+        {episodes.length > 0 ? (
           <div className="space-y-3">
-            {novel.episodes.map((episode, index) => (
+            {episodes.map((episode, index) => (
               <Link
                 key={episode.episode_id}
                 href={`/author/novels/${resolvedParams.id}/chapters/${episode.episode_id}`}

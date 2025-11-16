@@ -3,8 +3,8 @@ import Link from "next/link"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { redirect } from "next/navigation"
 import { ApproveNovelButton } from "@/components/approve-novel-button"
-import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
+import { listPendingNovels } from "@/lib/repositories/novels"
 
 export default async function PendingNovelsPage() {
   const user = await getCurrentUser()
@@ -13,17 +13,7 @@ export default async function PendingNovelsPage() {
     redirect("/")
   }
 
-  const novels = await prisma.novel.findMany({
-    where: { status: "PENDING_APPROVAL" },
-    orderBy: { created_at: "desc" },
-    include: {
-      author: {
-        select: {
-          username: true,
-        },
-      },
-    },
-  })
+  const novels = await listPendingNovels()
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,7 +33,7 @@ export default async function PendingNovelsPage() {
                       <Badge variant="outline">Submitted</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      by {novel.author?.username ?? "Unknown"} • {new Date(novel.created_at).toLocaleDateString()}
+                      by {novel.author_username ?? "Unknown"} • {new Date(novel.created_at).toLocaleDateString()}
                     </p>
                     {novel.tags && <p className="mb-2 text-sm text-muted-foreground">Tags: {novel.tags}</p>}
                     {novel.description ? (

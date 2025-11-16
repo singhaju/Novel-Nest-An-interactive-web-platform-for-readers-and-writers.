@@ -1,6 +1,7 @@
 import { Header } from "@/components/header"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listRecentNovels } from "@/lib/repositories/novels"
+import { getCommentCount, getEpisodeCount, getNovelCounts, getUserCount } from "@/lib/repositories/stats"
 import { redirect } from "next/navigation"
 import { Database, HardDrive, Activity, Users } from "lucide-react"
 
@@ -12,25 +13,16 @@ export default async function DeveloperDashboardPage() {
     redirect("/")
   }
 
-  const [novelCount, episodeCount, commentCount, userCount] = await Promise.all([
-    prisma.novel.count(),
-    prisma.episode.count(),
-    prisma.comment.count(),
-    prisma.user.count(),
+  const [novelCounts, episodeCount, commentCount, userCount, recentNovels] = await Promise.all([
+    getNovelCounts(),
+    getEpisodeCount(),
+    getCommentCount(),
+    getUserCount(),
+    listRecentNovels(5),
   ])
 
+  const novelCount = novelCounts.total
   const totalRecords = novelCount + episodeCount + commentCount + userCount
-
-  const recentNovels = await prisma.novel.findMany({
-    orderBy: { created_at: "desc" },
-    take: 5,
-    select: {
-      novel_id: true,
-      title: true,
-      status: true,
-      created_at: true,
-    },
-  })
 
   return (
     <div className="min-h-screen bg-background">

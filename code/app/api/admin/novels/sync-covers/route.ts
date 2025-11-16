@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { DEFAULT_COVER_FOLDER_ID, listFilesInFolder } from "@/lib/google-drive"
 import { buildCoverProxyUrl, normalizeCoverImageUrl } from "@/lib/utils"
 import { slugify } from "@/lib/tags"
+import { listNovelsForCoverSync, updateNovel } from "@/lib/repositories/novels"
 
 const ALLOWED_ROLES = new Set(["admin", "developer", "superadmin"])
 
@@ -46,13 +46,7 @@ export async function POST() {
       }
     }
 
-    const novels = await prisma.novel.findMany({
-      select: {
-        novel_id: true,
-        title: true,
-        cover_image: true,
-      },
-    })
+    const novels = await listNovelsForCoverSync()
 
     const updates: Array<{ novelId: number; title: string; newUrl: string }> = []
     const missing: Array<{ novelId: number; title: string }> = []
@@ -75,10 +69,7 @@ export async function POST() {
         continue
       }
 
-      await prisma.novel.update({
-        where: { novel_id: novel.novel_id },
-        data: { cover_image: nextUrl },
-      })
+      await updateNovel(novel.novel_id, { cover_image: nextUrl })
 
       updates.push({ novelId: novel.novel_id, title: novel.title, newUrl: nextUrl })
     }

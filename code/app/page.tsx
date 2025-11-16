@@ -7,9 +7,11 @@ import { DiscoveryGrid } from "@/components/home/discovery-grid"
 import { ValueProps } from "@/components/home/value-props"
 import { CtaBanner } from "@/components/home/cta-banner"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import type { Novel } from "@/lib/types/database"
 import { normalizeTag, slugify } from "@/lib/tags"
+import { listWishlistByUser } from "@/lib/repositories/wishlist"
+import { listFollowingAuthors } from "@/lib/repositories/follows"
+import { listRecentNovelsByAuthors } from "@/lib/repositories/novels"
 
 export default async function HomePage() {
   const session = await auth()
@@ -73,32 +75,40 @@ export default async function HomePage() {
     const userId = Number.parseInt((session.user as any).id)
 
     const [wishlistItems, followingAuthors] = await Promise.all([
-      prisma.userWishlist.findMany({
-        where: { user_id: userId },
-        include: { novel: { include: { author: { select: { user_id: true, username: true } } } } },
-        orderBy: { added_at: "desc" },
-      }),
-      prisma.userFollow.findMany({
-        where: { follower_id: userId },
-        select: { following_id: true },
-      }),
+      listWishlistByUser(userId),
+      listFollowingAuthors(userId),
     ])
 
-    const followedAuthorIds = followingAuthors.map((f) => f.following_id)
+    const followedAuthorIds = followingAuthors
+      .map((f) => f.following_id)
+      .filter((id): id is number => typeof id === "number")
 
     const followedNovels = followedAuthorIds.length
-      ? await prisma.novel.findMany({
-          where: { author_id: { in: followedAuthorIds }, status: "ONGOING" },
-          orderBy: { created_at: "desc" },
-          include: { author: { select: { user_id: true, username: true } } },
-          take: 4,
-        })
+      ? await listRecentNovelsByAuthors(followedAuthorIds, 4)
       : []
 
-    const wishlistNovels = wishlistItems.map((w) => w.novel).filter(Boolean)
+    const wishlistNovels = wishlistItems.map((item) => ({
+      novel_id: item.novel_id,
+      id: item.novel_id,
+      title: item.title,
+      description: item.description,
+      author: item.author_username ? { username: item.author_username } : undefined,
+      total_views: Number(item.views ?? 0),
+      cover_image: item.cover_image,
+    }))
+
+    const normalizedFollowed = followedNovels.map((novel) => ({
+      novel_id: novel.novel_id,
+      id: novel.novel_id,
+      title: novel.title,
+      description: novel.description,
+      author: novel.author_username ? { username: novel.author_username } : undefined,
+      total_views: Number(novel.views ?? 0),
+      cover_image: novel.cover_image,
+    }))
 
     // Merge wishlist novels first, then followed authors' novels, dedupe by novel_id
-    const merged = [...wishlistNovels, ...followedNovels]
+    const merged = [...wishlistNovels, ...normalizedFollowed]
     const deduped: any[] = []
     const seen = new Set<number>()
     for (const n of merged) {

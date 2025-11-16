@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listEpisodesByNovel, createEpisode } from "@/lib/repositories/episodes"
+import { findNovelById } from "@/lib/repositories/novels"
 import { uploadToGoogleDrive } from "@/lib/google-drive"
 
 function normaliseEpisodePayload(contentType: string | null, raw: NextRequest) {
@@ -35,15 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid novel ID" }, { status: 400 })
     }
 
-    const episodes = await prisma.episode.findMany({
-      where: { novel_id: novelId },
-      select: {
-        episode_id: true,
-        title: true,
-        release_date: true,
-      },
-      orderBy: { episode_id: "asc" },
-    })
+    const episodes = await listEpisodesByNovel(novelId)
 
     return NextResponse.json(
       episodes.map((episode) => ({
@@ -85,17 +78,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const novel = await prisma.novel.findUnique({
-      where: { novel_id: novelId },
-      select: { author_id: true },
-    })
+    const novel = await findNovelById(novelId)
 
     if (!novel) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
 
     const userId = Number.parseInt((session.user as any).id)
-  if (novel.author_id !== userId && !["admin", "developer", "superadmin"].includes(role)) {
+    if (novel.author_id !== userId && !["admin", "developer", "superadmin"].includes(role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -111,18 +101,10 @@ export async function POST(request: NextRequest) {
       console.warn("Falling back to storing raw episode content:", driveError)
     }
 
-    const episode = await prisma.episode.create({
-      data: {
-        novel_id: novelId,
-        title,
-        content: contentUrl,
-      },
-      select: {
-        episode_id: true,
-        novel_id: true,
-        title: true,
-        release_date: true,
-      },
+    const episode = await createEpisode({
+      novel_id: novelId,
+      title,
+      content: contentUrl,
     })
 
     return NextResponse.json(episode, { status: 201 })

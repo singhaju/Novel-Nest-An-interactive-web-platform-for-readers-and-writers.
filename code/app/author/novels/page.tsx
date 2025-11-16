@@ -1,7 +1,7 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listNovelsForManagement } from "@/lib/repositories/novels"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 
@@ -16,17 +16,7 @@ export default async function AuthorNovelsPage() {
   const authorId = Number.parseInt((session.user as any).id)
   const canManageAll = ["developer", "superadmin"].includes(role)
 
-  const novels = await prisma.novel.findMany({
-    where: canManageAll ? {} : { author_id: authorId },
-    include: {
-      author: {
-        select: {
-          username: true,
-        },
-      },
-    },
-    orderBy: { last_update: "desc" },
-  })
+  const novels = await listNovelsForManagement(canManageAll ? {} : { authorId })
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,13 +41,13 @@ export default async function AuthorNovelsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="mb-2 text-lg font-semibold">{novel.title}</h3>
-                    {canManageAll && novel.author?.username && (
-                      <p className="text-sm text-muted-foreground">Author: {novel.author.username}</p>
+                    {canManageAll && novel.author_username && (
+                      <p className="text-sm text-muted-foreground">Author: {novel.author_username}</p>
                     )}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <span className="capitalize">{novel.status.toLowerCase()}</span>
-                      <span>{(novel.views ?? 0).toLocaleString()} views</span>
-                      <span>{(novel.likes ?? 0).toLocaleString()} likes</span>
+                      <span>{Number(novel.views ?? 0).toLocaleString()} views</span>
+                      <span>{Number(novel.likes ?? 0).toLocaleString()} likes</span>
                       <span>Rating: {Number(novel.rating ?? 0).toFixed(1)}</span>
                     </div>
                   </div>

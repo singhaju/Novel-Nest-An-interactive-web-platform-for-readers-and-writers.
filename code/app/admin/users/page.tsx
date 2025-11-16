@@ -1,8 +1,8 @@
 import { Header } from "@/components/header"
 import { getCurrentUser } from "@/lib/actions/auth"
-import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
+import { listUsers } from "@/lib/repositories/users"
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser()
@@ -11,9 +11,7 @@ export default async function AdminUsersPage() {
     redirect("/")
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: { created_at: "desc" },
-  })
+  const users = await listUsers(500)
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listWishlistByUser, toggleWishlistEntry } from "@/lib/repositories/wishlist"
+import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 // GET /api/wishlist - Get user's wishlist
 export async function GET(request: NextRequest) {
@@ -13,26 +14,30 @@ export async function GET(request: NextRequest) {
 
     const userId = Number.parseInt((session.user as any).id)
 
-    const wishlist = await prisma.userWishlist.findMany({
-      where: { user_id: userId },
-      include: {
-        novel: {
-          include: {
-            author: {
-              select: {
-                user_id: true,
-                username: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        added_at: "desc",
-      },
-    })
+    const wishlist = await listWishlistByUser(userId)
 
-    return NextResponse.json(wishlist)
+    const mapped = wishlist.map((item) => ({
+      user_id: item.user_id,
+      novel_id: item.novel_id,
+      added_at: item.added_at,
+      novel: {
+        novel_id: item.novel_id,
+        title: item.title,
+        description: item.description,
+        cover_image: normalizeCoverImageUrl(item.cover_image) ?? item.cover_image,
+        tags: item.tags,
+        status: item.status,
+        author: item.author_user_id
+          ? {
+              user_id: item.author_user_id,
+              username: item.author_username,
+              profile_picture: normalizeProfileImageUrl(item.author_profile_picture ?? undefined) ?? undefined,
+            }
+          : null,
+      },
+    }))
+
+    return NextResponse.json(mapped)
   } catch (error) {
     console.error("Error fetching wishlist:", error)
     return NextResponse.json({ error: "Failed to fetch wishlist" }, { status: 500 })
@@ -50,32 +55,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { novelId } = body
+    const parsedNovelId = Number.parseInt(String(novelId))
 
-    if (!novelId) {
+    if (Number.isNaN(parsedNovelId)) {
       return NextResponse.json({ error: "Novel ID is required" }, { status: 400 })
     }
 
     const userId = Number.parseInt((session.user as any).id)
 
-    // Check if already in wishlist
-    const existing = await prisma.userWishlist.findUnique({
-      where: {
-        user_id_novel_id: {
-          user_id: userId,
-          novel_id: novelId,
-        },
-      },
-    })
+    const result = await toggleWishlistEntry(userId, parsedNovelId)
 
-    if (existing) {
-      await prisma.$executeRaw`CALL RemoveFromWishlist(${userId}, ${novelId})`
-
-      return NextResponse.json({ action: "removed" })
-    } else {
-      await prisma.$executeRaw`CALL AddToWishlist(${userId}, ${novelId})`
-
-      return NextResponse.json({ action: "added" })
-    }
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Error toggling wishlist:", error)
     return NextResponse.json({ error: "Failed to toggle wishlist" }, { status: 500 })

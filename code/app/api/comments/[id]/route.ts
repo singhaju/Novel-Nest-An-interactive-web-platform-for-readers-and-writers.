@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { deleteComment, findCommentById, updateCommentContent } from "@/lib/repositories/comments"
 
 async function resolveParams(context: any) {
   return context?.params instanceof Promise ? await context.params : context?.params
@@ -29,10 +29,7 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const comment = await prisma.comment.findUnique({
-      where: { comment_id: commentId },
-      select: { user_id: true },
-    })
+    const comment = await findCommentById(commentId)
 
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
@@ -57,17 +54,11 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 })
     }
 
-    const updatedComment = await prisma.comment.update({
-      where: { comment_id: commentId },
-      data: { content },
-      select: {
-        comment_id: true,
-        episode_id: true,
-        user_id: true,
-        content: true,
-        created_at: true,
-      },
-    })
+    const updatedComment = await updateCommentContent(commentId, content)
+
+    if (!updatedComment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
+    }
 
     return NextResponse.json(updatedComment)
   } catch (error) {
@@ -91,10 +82,7 @@ export async function DELETE(_request: NextRequest, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const comment = await prisma.comment.findUnique({
-      where: { comment_id: commentId },
-      select: { user_id: true },
-    })
+    const comment = await findCommentById(commentId)
 
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
@@ -112,7 +100,7 @@ export async function DELETE(_request: NextRequest, context: any) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    await prisma.comment.delete({ where: { comment_id: commentId } })
+  await deleteComment(commentId)
 
     return NextResponse.json({ message: "Comment deleted" })
   } catch (error) {

@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import {
+  deleteNovel as deleteNovelRecord,
+  findNovelById,
+  getNovelDetail,
+  incrementNovelViews,
+  updateNovel as updateNovelRecord,
+} from "@/lib/repositories/novels"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 // GET /api/novels/[id] - Get a single novel
@@ -16,77 +22,40 @@ export async function GET(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Invalid novel ID" }, { status: 400 })
     }
 
-    const novel = await prisma.novel.findUnique({
-      where: { novel_id: novelId },
-      include: {
-        author: {
-          select: {
-            user_id: true,
-            username: true,
-            profile_picture: true,
-            bio: true,
-          },
-        },
-        episodes: {
-          orderBy: {
-            episode_id: "asc",
-          },
-          select: {
-            episode_id: true,
-            title: true,
-            release_date: true,
-          },
-        },
-        reviews: {
-          include: {
-            user: {
-              select: {
-                user_id: true,
-                username: true,
-                profile_picture: true,
-              },
-            },
-          },
-          orderBy: {
-            created_at: "desc",
-          },
-        },
-        _count: {
-          select: {
-            episodes: true,
-            reviews: true,
-            wishlists: true,
-          },
-        },
-      },
-    })
+    const detail = await getNovelDetail(novelId)
 
-    if (!novel) {
+    if (!detail) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
 
-    // Increment view count
-    await prisma.novel.update({
-      where: { novel_id: novelId },
-      data: { views: { increment: 1 } },
-    })
+    await incrementNovelViews(novelId)
 
     const normalizedNovel = {
-      ...novel,
-      cover_image: normalizeCoverImageUrl(novel.cover_image) ?? null,
-      author: novel.author
+      ...detail.novel,
+      cover_image: normalizeCoverImageUrl(detail.novel.cover_image) ?? null,
+      author: detail.novel.author_user_id
         ? {
-            ...novel.author,
-            profile_picture: normalizeProfileImageUrl(novel.author.profile_picture) ?? null,
+            user_id: detail.novel.author_user_id,
+            username: detail.novel.author_username,
+            profile_picture: normalizeProfileImageUrl(detail.novel.author_profile_picture ?? undefined) ?? null,
+            bio: detail.novel.author_bio ?? null,
           }
-        : novel.author,
-      reviews: novel.reviews.map((review) => ({
-        ...review,
+        : null,
+      episodes: detail.episodes,
+      reviews: detail.reviews.map((review) => ({
+        review_id: review.review_id,
+        novel_id: review.novel_id,
+        user_id: review.user_id,
+        rating: review.rating,
+        comment: review.comment,
+        created_at: review.created_at,
         user: {
-          ...review.user,
-          profile_picture: normalizeProfileImageUrl(review.user.profile_picture) ?? null,
+          user_id: review.review_user_id,
+          username: review.review_username,
+          profile_picture: normalizeProfileImageUrl(review.review_profile_picture ?? undefined) ?? null,
         },
       })),
+      _count: detail.counts,
     }
 
     return NextResponse.json(normalizedNovel)
@@ -116,9 +85,7 @@ export async function PATCH(request: NextRequest, context: any) {
     const body = await request.json()
 
     // Check if user is the author or admin
-    const novel = await prisma.novel.findUnique({
-      where: { novel_id: novelId },
-    })
+    const novel = await findNovelById(novelId)
 
     if (!novel) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
@@ -133,10 +100,14 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const updatedNovel = await prisma.novel.update({
-      where: { novel_id: novelId },
-      data: body,
-    })
+    const payload: Record<string, any> = {}
+    if (typeof body.title === "string") payload.title = body.title
+    if (typeof body.description === "string") payload.description = body.description
+    if (typeof body.cover_image === "string") payload.cover_image = body.cover_image
+    if (typeof body.tags === "string") payload.tags = body.tags
+    if (typeof body.status === "string") payload.status = body.status.toUpperCase()
+
+    const updatedNovel = await updateNovelRecord(novelId, payload)
 
     return NextResponse.json(updatedNovel)
   } catch (error) {
@@ -163,9 +134,7 @@ export async function DELETE(request: NextRequest, context: any) {
     }
 
     // Check if user is the author or admin
-    const novel = await prisma.novel.findUnique({
-      where: { novel_id: novelId },
-    })
+    const novel = await findNovelById(novelId)
 
     if (!novel) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
@@ -180,9 +149,7 @@ export async function DELETE(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    await prisma.novel.delete({
-      where: { novel_id: novelId },
-    })
+    await deleteNovelRecord(novelId)
 
     return NextResponse.json({ message: "Novel deleted successfully" })
   } catch (error) {

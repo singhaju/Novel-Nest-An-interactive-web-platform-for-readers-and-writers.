@@ -10,8 +10,10 @@ import { FollowButton } from "@/components/follow-button"
 import { ShareButton } from "@/components/share-button"
 import { ReviewForm } from "@/components/review-form"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
+import { getNovelDetail, incrementNovelViews } from "@/lib/repositories/novels"
+import { hasUserLikedNovel } from "@/lib/repositories/likes"
+import { isNovelInWishlist } from "@/lib/repositories/wishlist"
 
 function formatStatus(status: string) {
   return status.toLowerCase().replace(/_/g, " ")
@@ -30,75 +32,43 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
 
   const userId = session?.user ? Number.parseInt((session.user as any).id) : null
 
-  const novel = await prisma.novel
-    .update({
-      where: { novel_id: novelId },
-      data: { views: { increment: 1 } },
-      include: {
-        author: {
-          select: {
-            user_id: true,
-            username: true,
-            profile_picture: true,
-          },
-        },
-        episodes: {
-          orderBy: { episode_id: "asc" },
-          select: {
-            episode_id: true,
-            title: true,
-            release_date: true,
-          },
-        },
-        reviews: {
-          orderBy: { created_at: "desc" },
-          include: {
-            user: {
-              select: {
-                user_id: true,
-                username: true,
-                profile_picture: true,
-              },
-            },
-          },
-        },
-        ...(userId
-          ? {
-              likedBy: {
-                where: {
-                  user_id: userId,
-                },
-                select: {
-                  user_id: true,
-                },
-              },
-            }
-          : {}),
-      },
-    })
-    .catch(() => null)
+  const detail = await getNovelDetail(novelId)
 
-  if (!novel) {
+  if (!detail) {
     notFound()
   }
 
-  const likedByRecords = userId
-    ? ((novel as unknown as { likedBy?: { user_id: number }[] }).likedBy ?? [])
-    : []
-  const hasLiked = userId ? likedByRecords.length > 0 : false
+  await incrementNovelViews(novelId)
 
-  const hasWishlisted = userId
-    ? Boolean(
-        await prisma.userWishlist.findUnique({
-          where: {
-            user_id_novel_id: {
-              user_id: userId,
-              novel_id: novel.novel_id,
-            },
-          },
-        }),
-      )
-    : false
+  const novel = {
+    ...detail.novel,
+    author: detail.novel.author_user_id
+      ? {
+          user_id: detail.novel.author_user_id,
+          username: detail.novel.author_username,
+          profile_picture: detail.novel.author_profile_picture,
+        }
+      : null,
+    episodes: detail.episodes,
+    reviews: detail.reviews.map((review) => ({
+      review_id: review.review_id,
+      novel_id: review.novel_id,
+      user_id: review.user_id,
+      rating: review.rating,
+      comment: review.comment,
+      created_at: review.created_at,
+      user: {
+        user_id: review.review_user_id,
+        username: review.review_username,
+        profile_picture: review.review_profile_picture,
+      },
+    })),
+  }
+
+  const [hasLiked, hasWishlisted] = await Promise.all([
+    userId ? hasUserLikedNovel(userId, novelId) : Promise.resolve(false),
+    userId ? isNovelInWishlist(userId, novelId) : Promise.resolve(false),
+  ])
 
   const episodes = novel.episodes.map((episode, index) => ({
     order: index + 1,

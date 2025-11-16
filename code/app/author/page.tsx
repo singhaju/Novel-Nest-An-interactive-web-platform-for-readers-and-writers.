@@ -1,7 +1,7 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listNovelsForManagement } from "@/lib/repositories/novels"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { BookOpen, FileText, Eye } from "lucide-react"
@@ -16,22 +16,16 @@ export default async function AuthorDashboardPage() {
 
   const authorId = Number.parseInt((session.user as any).id)
 
-  const novels = await prisma.novel.findMany({
-    where: { author_id: authorId },
-    include: {
-      _count: { select: { episodes: true } },
-    },
-    orderBy: { last_update: "desc" },
-  })
+  const novels = await listNovelsForManagement({ authorId })
 
-  const totalEpisodes = novels.reduce((sum, novel) => sum + (novel._count?.episodes ?? 0), 0)
-  const totalViews = novels.reduce((sum, novel) => sum + (novel.views ?? 0), 0)
+  const totalEpisodes = novels.reduce((sum, novel) => sum + Number(novel.episode_count ?? 0), 0)
+  const totalViews = novels.reduce((sum, novel) => sum + Number(novel.views ?? 0), 0)
 
   const recentNovels = novels.slice(0, 6).map((novel) => ({
     id: novel.novel_id,
     title: novel.title,
     status: novel.status.toLowerCase(),
-    views: novel.views ?? 0,
+    views: Number(novel.views ?? 0),
   }))
 
   return (

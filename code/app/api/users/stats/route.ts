@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { getUserCount } from "@/lib/repositories/stats"
 
 export async function GET() {
   try {
@@ -16,9 +16,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const total = await prisma.user.count()
+  const total = await getUserCount()
 
-    return NextResponse.json({ total })
+  return NextResponse.json({ total })
   } catch (error) {
     console.error("[v0] Error fetching user stats:", error)
     return NextResponse.json({ error: "Failed to fetch user stats" }, { status: 500 })

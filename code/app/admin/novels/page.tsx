@@ -1,9 +1,9 @@
 import { Header } from "@/components/header"
 import { getCurrentUser } from "@/lib/actions/auth"
-import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { listNovelsForManagement } from "@/lib/repositories/novels"
 
 export default async function AdminNovelsPage() {
   const user = await getCurrentUser()
@@ -12,16 +12,7 @@ export default async function AdminNovelsPage() {
     redirect("/")
   }
 
-  const novels = await prisma.novel.findMany({
-    orderBy: { created_at: "desc" },
-    include: {
-      author: {
-        select: {
-          username: true,
-        },
-      },
-    },
-  })
+  const novels = await listNovelsForManagement()
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,11 +32,11 @@ export default async function AdminNovelsPage() {
                       {novel.status.toLowerCase()}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">by {novel.author?.username ?? "Unknown"}</p>
+                  <p className="text-sm text-muted-foreground mb-2">by {novel.author_username ?? "Unknown"}</p>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{novel.views.toLocaleString()} views</span>
-                    <span>{novel.likes.toLocaleString()} likes</span>
-                    <span>Rating: {Number(novel.rating).toFixed(1)}</span>
+                    <span>{Number(novel.views ?? 0).toLocaleString()} views</span>
+                    <span>{Number(novel.likes ?? 0).toLocaleString()} likes</span>
+                    <span>Rating: {Number(novel.rating ?? 0).toFixed(1)}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">

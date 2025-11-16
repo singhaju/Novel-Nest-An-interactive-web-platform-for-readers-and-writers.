@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { createReviewWithUser, getAverageRatingForNovel, updateNovelRating } from "@/lib/repositories/reviews"
 
 // POST /api/reviews - Create a review
 export async function POST(request: NextRequest) {
@@ -24,38 +24,24 @@ export async function POST(request: NextRequest) {
 
     const userId = Number.parseInt((session.user as any).id)
 
-    const review = await prisma.review.create({
-      data: {
-        novel_id: novelId,
-        user_id: userId,
-        rating,
-        comment,
+    const review = await createReviewWithUser({
+      novel_id: novelId,
+      user_id: userId,
+      rating,
+      comment,
+    })
+
+    const avgRating = await getAverageRatingForNovel(novelId)
+    await updateNovelRating(novelId, avgRating)
+
+    return NextResponse.json({
+      ...review,
+      user: {
+        user_id: review.user_id,
+        username: review.user_username,
+        profile_picture: review.user_profile_picture,
       },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            username: true,
-            profile_picture: true,
-          },
-        },
-      },
-    })
-
-    // Update novel average rating
-    const reviews = await prisma.review.findMany({
-      where: { novel_id: novelId },
-      select: { rating: true },
-    })
-
-    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-
-    await prisma.novel.update({
-      where: { novel_id: novelId },
-      data: { rating: avgRating },
-    })
-
-    return NextResponse.json(review, { status: 201 })
+    }, { status: 201 })
   } catch (error) {
     console.error("Error creating review:", error)
     return NextResponse.json({ error: "Failed to create review" }, { status: 500 })

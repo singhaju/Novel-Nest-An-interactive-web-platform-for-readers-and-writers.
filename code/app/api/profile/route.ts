@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { updateUserProfile } from "@/lib/repositories/users"
 import { normalizeProfileImageUrl } from "@/lib/utils"
 
 export async function PATCH(request: Request) {
@@ -50,11 +50,11 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const updated = await prisma.user.update({
-      where: { user_id: userId },
-      data,
-      select: { bio: true, profile_picture: true },
-    })
+    const updated = await updateUserProfile(userId, data)
+
+    if (!updated) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
 
     return NextResponse.json({
       bio: updated.bio ?? null,

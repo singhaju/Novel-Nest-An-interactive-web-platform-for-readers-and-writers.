@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { getNovelCounts } from "@/lib/repositories/stats"
 
 export async function GET() {
   try {
@@ -16,10 +16,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const total = await prisma.novel.count()
-    const pending = await prisma.novel.count({
-      where: { status: "PENDING_APPROVAL" },
-    })
+    const { total, pending } = await getNovelCounts()
 
     return NextResponse.json({ total, pending })
   } catch (error) {

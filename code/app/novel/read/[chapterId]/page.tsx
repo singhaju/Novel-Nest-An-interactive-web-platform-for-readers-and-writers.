@@ -2,8 +2,9 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { CommentSection } from "@/components/comment-section"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { getFileFromGoogleDrive } from "@/lib/google-drive"
+import { findEpisodeWithDetails, listEpisodeIdsForNovel } from "@/lib/repositories/episodes"
+import { upsertReadingProgress } from "@/lib/repositories/reading-progress"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 
@@ -34,58 +35,24 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
     notFound()
   }
 
-  const episode = await prisma.episode.findUnique({
-    where: { episode_id: episodeId },
-    include: {
-      novel: {
-        select: {
-          novel_id: true,
-          title: true,
-          author: {
-            select: {
-              username: true,
-            },
-          },
-        },
-      },
-    },
-  })
+  const episode = await findEpisodeWithDetails(episodeId)
 
   if (!episode) {
     notFound()
   }
 
-  const orderedEpisodes = await prisma.episode.findMany({
-    where: { novel_id: episode.novel_id },
-    orderBy: { episode_id: "asc" },
-    select: { episode_id: true },
-  })
+  const orderedEpisodeIds = await listEpisodeIdsForNovel(episode.novel_id)
 
-  const currentIndex = orderedEpisodes.findIndex((item) => item.episode_id === episodeId)
+  const currentIndex = orderedEpisodeIds.findIndex((id) => id === episodeId)
   const safeIndex = currentIndex >= 0 ? currentIndex : 0
-  const previousEpisode = orderedEpisodes[safeIndex - 1]
-  const nextEpisode = orderedEpisodes[safeIndex + 1]
+  const previousEpisodeId = orderedEpisodeIds[safeIndex - 1]
+  const nextEpisodeId = orderedEpisodeIds[safeIndex + 1]
 
   const session = await auth()
   const userId = session?.user ? Number.parseInt((session.user as any).id) : null
 
   if (userId && Number.isFinite(userId)) {
-    await prisma.userReadingProgress.upsert({
-      where: {
-        user_id_novel_id: {
-          user_id: userId,
-          novel_id: episode.novel_id,
-        },
-      },
-      update: {
-        last_read_episode_id: episode.episode_id,
-      },
-      create: {
-        user_id: userId,
-        novel_id: episode.novel_id,
-        last_read_episode_id: episode.episode_id,
-      },
-    })
+    await upsertReadingProgress(userId, episode.novel_id, episode.episode_id)
   }
 
   const content = await loadContent(episode.content)
@@ -108,8 +75,8 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
         </div>
 
         <div className="mb-8 flex gap-4">
-          {previousEpisode ? (
-            <Link href={`/novel/read/${previousEpisode.episode_id}`} className="flex-1">
+          {previousEpisodeId ? (
+            <Link href={`/novel/read/${previousEpisodeId}`} className="flex-1">
               <Button variant="outline" className="w-full rounded-3xl bg-transparent py-6">
                 Previous Episode
               </Button>
@@ -120,8 +87,8 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
             </Button>
           )}
 
-          {nextEpisode ? (
-            <Link href={`/novel/read/${nextEpisode.episode_id}`} className="flex-1">
+          {nextEpisodeId ? (
+            <Link href={`/novel/read/${nextEpisodeId}`} className="flex-1">
               <Button className="w-full rounded-3xl py-6">Next Episode</Button>
             </Link>
           ) : (

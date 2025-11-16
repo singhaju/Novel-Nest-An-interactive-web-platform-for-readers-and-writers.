@@ -72,15 +72,7 @@ mysql -u root -p novel_nest < scripts/seed_novels.sql
 # Simply open scripts/seed_novels.sql and execute it
 ```
 
-### Option 3: Using Prisma (if you prefer)
-
-```bash
-# First, ensure your Prisma schema is set up
-npx prisma generate
-
-# Then, if you have a Prisma seeder set up:
-npx prisma db seed
-```
+> **Note:** Prisma-based seeding has been retired. All data loading now flows through the mysql2 scripts above, so you can ignore any legacy `prisma` references.
 
 ## Prerequisites
 

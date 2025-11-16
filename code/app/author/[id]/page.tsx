@@ -2,9 +2,10 @@ import { Header } from "@/components/header"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { prisma } from "@/lib/prisma"
 import { FollowButton } from "@/components/follow-button"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
+import { findUserById } from "@/lib/repositories/users"
+import { listNovelsForManagement } from "@/lib/repositories/novels"
 
 type PageParams = { id: string }
 
@@ -16,31 +17,13 @@ export default async function AuthorPage(props: { params: PageParams } | { param
     notFound()
   }
 
-  const author = await prisma.user.findUnique({
-    where: { user_id: authorId },
-    select: {
-      user_id: true,
-      username: true,
-      profile_picture: true,
-      bio: true,
-      novels: {
-        orderBy: { last_update: "desc" },
-        select: {
-          novel_id: true,
-          title: true,
-          cover_image: true,
-          views: true,
-          likes: true,
-          status: true,
-          last_update: true,
-        },
-      },
-    },
-  })
+  const author = await findUserById(authorId)
 
   if (!author) {
     notFound()
   }
+
+  const novels = await listNovelsForManagement({ authorId })
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,14 +68,14 @@ export default async function AuthorPage(props: { params: PageParams } | { param
           <section className="space-y-6">
             <div>
               <h2 className="mb-2 text-2xl font-bold">Novels by {author.username}</h2>
-              <p className="text-sm text-muted-foreground">{author.novels.length} {author.novels.length === 1 ? "novel" : "novels"}</p>
+              <p className="text-sm text-muted-foreground">{novels.length} {novels.length === 1 ? "novel" : "novels"}</p>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {author.novels.length === 0 ? (
+              {novels.length === 0 ? (
                 <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">This author hasn't published any novels yet.</div>
               ) : (
-                author.novels.map((novel) => (
+                novels.map((novel) => (
                   <Link
                     key={novel.novel_id}
                     href={`/novel/${novel.novel_id}`}

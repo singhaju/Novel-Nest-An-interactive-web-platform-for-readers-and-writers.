@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { prisma } from "@/lib/prisma"
+import { getTrendingNovels } from "@/lib/repositories/novels"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 const SUPPORTED_PERIODS = ["daily", "weekly", "monthly", "all"] as const
@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
     const timePeriod = normalizePeriod(request.nextUrl.searchParams.get("timePeriod"))
     const sqlPeriod = timePeriod === "all" ? "all" : timePeriod
 
-  const rawResult = (await prisma.$queryRaw<any[]>`CALL GetTrendingNovels(${sqlPeriod})`) ?? []
+    const rawResult = await getTrendingNovels(sqlPeriod)
 
     const rows = Array.isArray(rawResult)
-      ? rawResult.flat().filter((row: any) => row && typeof row === "object" && "novel_id" in row)
+      ? rawResult.filter((row: any) => row && typeof row === "object" && "novel_id" in row)
       : []
 
     const novels = rows.map((row: any) => ({

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { installAdvancedSqlFeatures } from "@/lib/db/install-advanced-sql"
 
 export async function POST() {
@@ -17,7 +16,7 @@ export async function POST() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    await installAdvancedSqlFeatures(prisma)
+  await installAdvancedSqlFeatures()
 
     return NextResponse.json({ status: "ok" })
   } catch (error) {

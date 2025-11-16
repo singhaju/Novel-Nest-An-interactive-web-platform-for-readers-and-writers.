@@ -3,8 +3,8 @@ import NextAuth from "next-auth"
 import { getServerSession } from "next-auth"
 import CredentialsProvider,  { type CredentialsConfig } from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import bcrypt from "bcryptjs"
-import { prisma } from "./prisma"
+import { hashPassword, verifyPassword } from "./security"
+import { findUserByEmail, findUserById, updateUserPassword } from "./repositories/users"
 import { normalizeProfileImageUrl } from "./utils"
 
 // ✅ Define configuration as an object
@@ -24,21 +24,21 @@ export const authConfig = {
           throw new Error("Invalid credentials")
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+        const user = await findUserByEmail(credentials.email)
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials")
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
+        const { valid, needsMigration } = await verifyPassword(credentials.password, user.password)
 
-        if (!isPasswordValid) {
+        if (!valid) {
           throw new Error("Invalid credentials")
+        }
+
+        if (needsMigration) {
+          const upgradedHash = hashPassword(credentials.password)
+          await updateUserPassword(user.user_id, upgradedHash)
         }
 
         const normalizedRole = typeof user.role === "string" ? user.role.toLowerCase() : "reader"
@@ -80,20 +80,12 @@ export const authConfig = {
         const userId = typeof token.id === "string" ? Number.parseInt(token.id, 10) : token.id
 
         if (!Number.isNaN(userId)) {
-          const dbUser = await prisma.user.findUnique({
-            where: { user_id: userId },
-            select: {
-              username: true,
-              email: true,
-              profile_picture: true,
-              bio: true,
-            },
-          })
+          const dbUser = await findUserById(userId)
 
           if (dbUser) {
             session.user.username = dbUser.username
             session.user.email = dbUser.email
-            const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture)
+            const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture ?? undefined)
             session.user.profile_picture = normalizedProfile ?? undefined
             session.user.bio = dbUser.bio
             token.profile_picture = normalizedProfile ?? token.profile_picture

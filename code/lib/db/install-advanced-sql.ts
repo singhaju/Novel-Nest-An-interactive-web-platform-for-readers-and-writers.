@@ -1,8 +1,8 @@
-import type { PrismaClient } from "@prisma/client"
+import { getPool } from "../db"
 
 // Installs MySQL stored procedures and triggers required by the project rubric.
 // Run via the admin installer API (see app/api/admin/db-features/route.ts).
-export async function installAdvancedSqlFeatures(prisma: PrismaClient) {
+export async function installAdvancedSqlFeatures() {
   const statements = [
     // Ensure audit log table exists for user deletions.
     `CREATE TABLE IF NOT EXISTS deleted_users_log (
@@ -147,7 +147,8 @@ BEGIN
 END`,
   ]
 
+  const pool = getPool()
   for (const statement of statements) {
-    await prisma.$executeRawUnsafe(statement)
+    await pool.query(statement)
   }
 }
