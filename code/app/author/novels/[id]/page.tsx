@@ -15,7 +15,7 @@ export default async function ManageNovelPage(
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["writer", "admin", "developer", "superadmin"].includes(role)) {
+  if (!session || !["writer", "developer", "superadmin"].includes(role)) {
     redirect("/")
   }
 
@@ -26,7 +26,7 @@ export default async function ManageNovelPage(
     notFound()
   }
 
-  const canManageAll = ["admin", "developer", "superadmin"].includes(role)
+  const canManageAll = ["developer", "superadmin"].includes(role)
 
   const novel = await prisma.novel.findFirst({
     where: canManageAll ? { novel_id: novelId } : { novel_id: novelId, author_id: authorId },

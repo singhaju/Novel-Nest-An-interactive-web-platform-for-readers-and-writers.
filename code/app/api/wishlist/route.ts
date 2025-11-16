@@ -68,25 +68,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (existing) {
-      // Remove from wishlist
-      await prisma.userWishlist.delete({
-        where: {
-          user_id_novel_id: {
-            user_id: userId,
-            novel_id: novelId,
-          },
-        },
-      })
+      await prisma.$executeRaw`CALL RemoveFromWishlist(${userId}, ${novelId})`
 
       return NextResponse.json({ action: "removed" })
     } else {
-      // Add to wishlist
-      await prisma.userWishlist.create({
-        data: {
-          user_id: userId,
-          novel_id: novelId,
-        },
-      })
+      await prisma.$executeRaw`CALL AddToWishlist(${userId}, ${novelId})`
 
       return NextResponse.json({ action: "added" })
     }

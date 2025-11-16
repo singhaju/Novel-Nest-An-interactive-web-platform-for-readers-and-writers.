@@ -119,6 +119,21 @@ export const apiClient = {
     return res.json()
   },
 
+  async getTrendingNovels(params?: { timePeriod?: "daily" | "weekly" | "monthly" | "all" }) {
+    const searchParams = new URLSearchParams()
+    if (params?.timePeriod) {
+      searchParams.set("timePeriod", params.timePeriod)
+    }
+
+    const url = searchParams.size
+      ? `${baseUrl}/api/novels/trending?${searchParams.toString()}`
+      : `${baseUrl}/api/novels/trending`
+
+    const res = await fetch(url, { cache: "no-store" })
+    if (!res.ok) throw new Error("Failed to fetch trending novels")
+    return res.json()
+  },
+
   // ✅ Episodes
   async createEpisode(formData: FormData) {
     const res = await fetch(`${baseUrl}/api/episodes`, { method: "POST", body: formData })

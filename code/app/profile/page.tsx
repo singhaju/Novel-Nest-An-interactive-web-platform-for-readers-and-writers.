@@ -7,6 +7,8 @@ import { redirect } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import Image from "next/image"
 import AvatarUploader from "@/components/avatar-uploader"
+import { BioForm } from "@/components/bio-form"
+import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 import Link from "next/link"
 import type { Session } from "next-auth"
 import type { Novel } from "@/lib/types/database"
@@ -36,7 +38,7 @@ function mapNovelForGrid(novel: PrismaNovelWithAuthor): Novel & { author?: { use
     title: novel.title,
     author_id: String(novel.author_id),
     summary: novel.description ?? undefined,
-    cover_url: novel.cover_image ?? undefined,
+  cover_url: normalizeCoverImageUrl(novel.cover_image) ?? undefined,
     status: novel.status.toLowerCase() as Novel["status"],
     total_views: novel.views ?? 0,
     total_likes: novel.likes ?? 0,
@@ -57,6 +59,22 @@ export default async function ProfilePage() {
 
   const user = session.user
   const userId = Number.parseInt((user as any).id, 10)
+
+  const dbUser = await prisma.user.findUnique({
+    where: { user_id: userId },
+    select: {
+      username: true,
+      email: true,
+      profile_picture: true,
+      bio: true,
+    },
+  })
+
+  if (!dbUser) {
+    redirect("/auth/login")
+  }
+
+  const profileImageUrl = normalizeProfileImageUrl(dbUser.profile_picture)
 
   const [readingProgress, likedNovels, wishlistItems, followingAuthors] = await Promise.all([
     prisma.userReadingProgress.findMany({
@@ -138,7 +156,7 @@ export default async function ProfilePage() {
               {/* Profile Picture (client) */}
               <div>
                 {/* AvatarUploader is a client component so import dynamically to avoid SSR issues */}
-                <AvatarUploader initialSrc={user.profile_picture} username={user.username} />
+                <AvatarUploader initialSrc={profileImageUrl ?? null} username={dbUser.username ?? user.name ?? "Reader"} />
               </div>
 
             {/* Badges */}
@@ -154,12 +172,12 @@ export default async function ProfilePage() {
           <div className="space-y-6">
             {/* Profile Info */}
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">{user.username}</h1>
-              <p className="text-xl text-muted-foreground mb-4">{user.email}</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">{dbUser.username ?? user.name}</h1>
+              <p className="text-xl text-muted-foreground mb-4">{dbUser.email ?? user.email}</p>
 
               <div className="rounded-3xl border border-border bg-card p-6">
                 <h2 className="text-lg font-semibold mb-2">Bio</h2>
-                <p className="text-muted-foreground leading-relaxed">{user.bio || "No bio added yet."}</p>
+                <BioForm initialBio={dbUser.bio} />
               </div>
             </div>
 
@@ -238,29 +256,32 @@ export default async function ProfilePage() {
                 </div>
                 <div className="mt-4 space-y-3">
                   {followingAuthors.length > 0 ? (
-                    followingAuthors.map((follow) => (
-                      <Link
-                        key={`${follow.follower_id}-${follow.following_id}`}
-                        href={`/author/${follow.following?.user_id}`}
-                        className="block"
-                      >
-                        <div className="flex items-center justify-between rounded-2xl border border-border bg-background p-4 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
-                              {follow.following?.profile_picture ? (
-                                <Image
-                                  src={follow.following.profile_picture}
-                                  alt={follow.following.username ?? "Author"}
-                                  width={40}
-                                  height={40}
-                                  className="h-10 w-10 object-cover"
-                                />
-                              ) : (
-                                <span className="text-sm font-semibold">
-                                  {follow.following?.username?.[0]?.toUpperCase() ?? "A"}
-                                </span>
-                              )}
-                            </div>
+                    followingAuthors.map((follow) => {
+                      const avatarUrl = normalizeProfileImageUrl(follow.following?.profile_picture)
+
+                      return (
+                        <Link
+                          key={`${follow.follower_id}-${follow.following_id}`}
+                          href={`/author/${follow.following?.user_id}`}
+                          className="block"
+                        >
+                          <div className="flex items-center justify-between rounded-2xl border border-border bg-background p-4 hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
+                                {avatarUrl ? (
+                                  <Image
+                                    src={avatarUrl}
+                                    alt={follow.following?.username ?? "Author"}
+                                    width={40}
+                                    height={40}
+                                    className="h-10 w-10 object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-semibold">
+                                    {follow.following?.username?.[0]?.toUpperCase() ?? "A"}
+                                  </span>
+                                )}
+                              </div>
                             <div>
                               <p className="font-medium text-foreground">{follow.following?.username ?? "Unknown Author"}</p>
                               {follow.following?.bio ? (
@@ -274,8 +295,9 @@ export default async function ProfilePage() {
                             Following since {formatDistanceToNow(follow.followed_at, { addSuffix: true })}
                           </span>
                         </div>
-                      </Link>
-                    ))
+                        </Link>
+                      )
+                    })
                   ) : (
                     <p className="rounded-2xl border border-dashed border-border py-6 text-center text-muted-foreground">
                       Follow authors to get updates on their latest releases.

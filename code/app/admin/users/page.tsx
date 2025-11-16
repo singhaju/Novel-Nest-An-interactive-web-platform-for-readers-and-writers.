@@ -1,6 +1,6 @@
 import { Header } from "@/components/header"
-import { createClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/lib/actions/auth"
+import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 
@@ -11,9 +11,9 @@ export default async function AdminUsersPage() {
     redirect("/")
   }
 
-  const supabase = await createClient()
-
-  const { data: users } = await supabase.from("profiles").select("*").order("created_at", { ascending: false })
+  const users = await prisma.user.findMany({
+    orderBy: { created_at: "desc" },
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,12 +34,12 @@ export default async function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {users?.map((profile) => (
-                  <tr key={profile.id} className="hover:bg-muted/50">
+                {users.map((profile) => (
+                  <tr key={profile.user_id} className="hover:bg-muted/50">
                     <td className="px-6 py-4">{profile.username}</td>
                     <td className="px-6 py-4">
                       <Badge variant="outline" className="capitalize">
-                        {profile.role}
+                        {profile.role.toLowerCase()}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">

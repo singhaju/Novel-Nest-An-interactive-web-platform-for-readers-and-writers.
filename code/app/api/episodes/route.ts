@@ -73,8 +73,11 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get("content-type")
     const body: any = await normaliseEpisodePayload(contentType, request)
 
-    const novelIdRaw = typeof body.novelId === "string" ? body.novelId : body.novel_id
-    const novelId = Number.parseInt(novelIdRaw ?? "")
+    const novelIdSource = body.novelId ?? body.novel_id
+    const novelId =
+      typeof novelIdSource === "number"
+        ? novelIdSource
+        : Number.parseInt(typeof novelIdSource === "string" ? novelIdSource : "", 10)
     const title = body.title as string | undefined
     const content = body.content as string | undefined
 

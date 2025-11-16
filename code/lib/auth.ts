@@ -5,6 +5,7 @@ import CredentialsProvider,  { type CredentialsConfig } from "next-auth/provider
 import GoogleProvider from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
+import { normalizeProfileImageUrl } from "./utils"
 
 // ✅ Define configuration as an object
 export const authConfig = {
@@ -63,6 +64,8 @@ export const authConfig = {
       if (user) {
         token.id = user.id
         token.role = typeof user.role === "string" ? user.role.toLowerCase() : token.role ?? "reader"
+  const normalizedProfile = normalizeProfileImageUrl((user as any).profile_picture)
+  token.profile_picture = normalizedProfile ?? token.profile_picture
       }
       if (token.role && typeof token.role === "string") {
         token.role = token.role.toLowerCase()
@@ -73,6 +76,33 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.id
         session.user.role = typeof token.role === "string" ? token.role.toLowerCase() : "reader"
+
+        const userId = typeof token.id === "string" ? Number.parseInt(token.id, 10) : token.id
+
+        if (!Number.isNaN(userId)) {
+          const dbUser = await prisma.user.findUnique({
+            where: { user_id: userId },
+            select: {
+              username: true,
+              email: true,
+              profile_picture: true,
+              bio: true,
+            },
+          })
+
+          if (dbUser) {
+            session.user.username = dbUser.username
+            session.user.email = dbUser.email
+            const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture)
+            session.user.profile_picture = normalizedProfile ?? undefined
+            session.user.bio = dbUser.bio
+            token.profile_picture = normalizedProfile ?? token.profile_picture
+          }
+        }
+
+        if (!session.user.profile_picture && typeof token.profile_picture === "string") {
+          session.user.profile_picture = token.profile_picture
+        }
       }
       return session
     },

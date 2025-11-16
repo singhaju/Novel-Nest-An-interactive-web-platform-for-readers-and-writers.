@@ -7,22 +7,29 @@ import { Check, X } from "lucide-react"
 
 interface ApproveNovelButtonProps {
   novelId: string
+  redirectTo?: string
 }
 
-export function ApproveNovelButton({ novelId }: ApproveNovelButtonProps) {
+export function ApproveNovelButton({ novelId, redirectTo }: ApproveNovelButtonProps) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  const complete = () => {
+    setLoading(false)
+    if (redirectTo) {
+      router.push(redirectTo)
+    }
+    router.refresh()
+  }
 
   const handleApprove = async () => {
     setLoading(true)
     await fetch(`/api/novels/${novelId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "Ongoing" }),
+      body: JSON.stringify({ status: "ONGOING" }),
     })
-
-    setLoading(false)
-    router.refresh()
+    complete()
   }
 
   const handleReject = async () => {
@@ -30,9 +37,7 @@ export function ApproveNovelButton({ novelId }: ApproveNovelButtonProps) {
     await fetch(`/api/novels/${novelId}`, {
       method: "DELETE",
     })
-
-    setLoading(false)
-    router.refresh()
+    complete()
   }
 
   return (

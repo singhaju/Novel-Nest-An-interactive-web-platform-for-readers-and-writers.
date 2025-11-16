@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Search } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, normalizeCoverImageUrl } from "@/lib/utils"
 
 type Suggestion = {
   id: string
@@ -161,7 +161,9 @@ export function SearchBar({ initialQuery, className }: SearchBarProps) {
             <div className="px-4 py-6 text-sm text-muted-foreground">Searching…</div>
           ) : hasResults ? (
             <ul className="divide-y divide-border">
-              {suggestions.map((novel) => (
+              {suggestions.map((novel) => {
+                const coverSrc = normalizeCoverImageUrl(novel.cover_url)
+                return (
                 <li key={novel.id}>
                   <Link
                     href={`/novel/${novel.id}`}
@@ -169,9 +171,9 @@ export function SearchBar({ initialQuery, className }: SearchBarProps) {
                     className="flex items-center gap-3 px-4 py-3 transition hover:bg-muted/70"
                   >
                     <div className="relative h-12 w-12 overflow-hidden rounded-md bg-muted">
-                      {novel.cover_url ? (
+                      {coverSrc ? (
                         <Image
-                          src={novel.cover_url}
+                          src={coverSrc}
                           alt={novel.title}
                           fill
                           sizes="48px"
@@ -191,7 +193,8 @@ export function SearchBar({ initialQuery, className }: SearchBarProps) {
                     </div>
                   </Link>
                 </li>
-              ))}
+                )
+              })}
               <li>
                 <button
                   type="button"

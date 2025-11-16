@@ -11,6 +11,7 @@ export default withAuth(
     const isPublicPath =
       pathname === "/" ||
       pathname.startsWith("/novels") ||
+      pathname.startsWith("/novel") ||
       pathname.startsWith("/auth");
 
     if (isPublicPath) {
@@ -35,7 +36,16 @@ export default withAuth(
   {
     callbacks: {
       // Only require authentication for non-public routes
-      authorized: ({ token }) => !!token,
+      authorized: ({ req, token }) => {
+        const publicPaths = ["/", "/novels", "/novel", "/auth"]
+        const pathname = req.nextUrl.pathname
+
+        if (publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+          return true
+        }
+
+        return !!token
+      },
     },
   }
 );

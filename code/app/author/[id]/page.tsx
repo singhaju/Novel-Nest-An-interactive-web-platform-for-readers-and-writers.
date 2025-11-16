@@ -4,6 +4,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { FollowButton } from "@/components/follow-button"
+import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 type PageParams = { id: string }
 
@@ -50,8 +51,13 @@ export default async function AuthorPage(props: { params: PageParams } | { param
           <aside className="space-y-4">
             <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6">
               <div className="relative h-36 w-36 overflow-hidden rounded-full bg-muted">
-                {author.profile_picture ? (
-                  <Image src={author.profile_picture} alt={author.username} fill className="object-cover" />
+                {normalizeProfileImageUrl(author.profile_picture) ? (
+                  <Image
+                    src={normalizeProfileImageUrl(author.profile_picture)!}
+                    alt={author.username}
+                    fill
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
                     <span className="text-xl font-semibold text-foreground">{author.username?.[0] ?? "A"}</span>
@@ -93,8 +99,13 @@ export default async function AuthorPage(props: { params: PageParams } | { param
                     className="group rounded-2xl border border-border bg-card p-4 hover:shadow"
                   >
                     <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-linear-to-br from-blue-100 to-green-100">
-                      {novel.cover_image ? (
-                        <Image src={novel.cover_image} alt={novel.title} fill className="object-cover" />
+                      {normalizeCoverImageUrl(novel.cover_image) ? (
+                        <Image
+                          src={normalizeCoverImageUrl(novel.cover_image)!}
+                          alt={novel.title}
+                          fill
+                          className="object-cover"
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center p-4">
                           <div className="text-center">

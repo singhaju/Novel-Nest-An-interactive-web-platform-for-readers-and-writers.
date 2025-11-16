@@ -8,8 +8,10 @@ import { LikeButton } from "@/components/like-button"
 import { WishlistButton } from "@/components/wishlist-button"
 import { FollowButton } from "@/components/follow-button"
 import { ShareButton } from "@/components/share-button"
+import { ReviewForm } from "@/components/review-form"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 function formatStatus(status: string) {
   return status.toLowerCase().replace(/_/g, " ")
@@ -103,6 +105,8 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
     ...episode,
   }))
 
+  const coverImageUrl = normalizeCoverImageUrl(novel.cover_image)
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -110,9 +114,9 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
           <div className="space-y-4">
-            <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-gradient-to-br from-blue-100 to-green-100">
-              {novel.cover_image ? (
-                <Image src={novel.cover_image} alt={novel.title} fill className="object-cover" />
+            <div className="relative aspect-3/4 overflow-hidden rounded-2xl bg-linear-to-br from-blue-100 to-green-100">
+              {coverImageUrl ? (
+                <Image src={coverImageUrl} alt={novel.title} fill className="object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <div className="p-4 text-center">
@@ -232,6 +236,16 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
 
             <div className="rounded-3xl border border-border bg-card p-6">
               <h2 className="mb-4 text-xl font-semibold">Reviews</h2>
+              {session?.user ? (
+                <ReviewForm novelId={novel.novel_id} className="mb-4" />
+              ) : (
+                <p className="mb-4 text-sm text-muted-foreground">
+                  <Link href="/auth/login" className="font-medium text-primary hover:underline">
+                    Log in
+                  </Link>{" "}
+                  to post a review.
+                </p>
+              )}
               {novel.reviews.length === 0 ? (
                 <p className="text-muted-foreground">No reviews yet.</p>
               ) : (
@@ -239,7 +253,22 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
                   {novel.reviews.map((review) => (
                     <div key={review.review_id} className="rounded-2xl border border-border bg-background p-4">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold">{review.user.username}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
+                            {normalizeProfileImageUrl(review.user.profile_picture) ? (
+                              <Image
+                                src={normalizeProfileImageUrl(review.user.profile_picture)!}
+                                alt={review.user.username}
+                                width={36}
+                                height={36}
+                                className="h-9 w-9 object-cover"
+                              />
+                            ) : (
+                              <span className="text-xs font-semibold">{review.user.username?.[0]?.toUpperCase() ?? "R"}</span>
+                            )}
+                          </div>
+                          <span className="font-semibold">{review.user.username}</span>
+                        </div>
                         <span className="text-sm text-muted-foreground">
                           {new Date(review.created_at).toLocaleDateString()}
                         </span>

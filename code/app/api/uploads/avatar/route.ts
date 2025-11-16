@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { uploadToGoogleDrive } from '@/lib/google-drive'
-
-// Fallback folder ID from the user-provided link. You can also set
-// process.env.GOOGLE_DRIVE_UPLOAD_FOLDER_ID to override.
-const DEFAULT_FOLDER_ID = process.env.GOOGLE_DRIVE_UPLOAD_FOLDER_ID || '1zwkV2zevwIM4TsVyghUYDe_AVeT0vjgu'
+import { DEFAULT_AVATAR_FOLDER_ID, uploadToGoogleDrive } from '@/lib/google-drive'
+import { buildAvatarProxyUrl, extractDriveFileIdFromUrl } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,9 +24,11 @@ export async function POST(req: NextRequest) {
 
     const name = fileName || `avatar-${Date.now()}`
 
-    const url = await uploadToGoogleDrive({ fileName: name, mimeType, fileContent: buffer, folderId: DEFAULT_FOLDER_ID })
+  const rawUrl = await uploadToGoogleDrive({ fileName: name, mimeType, fileContent: buffer, folderId: DEFAULT_AVATAR_FOLDER_ID })
+    const fileId = extractDriveFileIdFromUrl(rawUrl)
+    const proxyUrl = fileId ? buildAvatarProxyUrl(fileId) : rawUrl
 
-    return NextResponse.json({ url })
+    return NextResponse.json({ url: proxyUrl, rawUrl, fileId })
   } catch (error: any) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: error?.message || 'Upload failed' }, { status: 500 })

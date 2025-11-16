@@ -4,7 +4,7 @@ import { CommentSection } from "@/components/comment-section"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getFileFromGoogleDrive } from "@/lib/google-drive"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import Link from "next/link"
 
 async function loadContent(source: string | null) {
@@ -67,28 +67,26 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
   const nextEpisode = orderedEpisodes[safeIndex + 1]
 
   const session = await auth()
-  if (!session?.user) {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/novel/read/${episodeId}`)}`)
-  }
+  const userId = session?.user ? Number.parseInt((session.user as any).id) : null
 
-  const userId = Number.parseInt((session.user as any).id)
-
-  await prisma.userReadingProgress.upsert({
-    where: {
-      user_id_novel_id: {
+  if (userId && Number.isFinite(userId)) {
+    await prisma.userReadingProgress.upsert({
+      where: {
+        user_id_novel_id: {
+          user_id: userId,
+          novel_id: episode.novel_id,
+        },
+      },
+      update: {
+        last_read_episode_id: episode.episode_id,
+      },
+      create: {
         user_id: userId,
         novel_id: episode.novel_id,
+        last_read_episode_id: episode.episode_id,
       },
-    },
-    update: {
-      last_read_episode_id: episode.episode_id,
-    },
-    create: {
-      user_id: userId,
-      novel_id: episode.novel_id,
-      last_read_episode_id: episode.episode_id,
-    },
-  })
+    })
+  }
 
   const content = await loadContent(episode.content)
 

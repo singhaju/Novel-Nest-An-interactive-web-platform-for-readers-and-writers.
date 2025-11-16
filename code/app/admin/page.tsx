@@ -1,6 +1,8 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { auth } from "@/lib/auth" // ✅ use the new `auth()` helper
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { cn } from "@/lib/utils"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Users, BookOpen, AlertCircle } from "lucide-react"
@@ -14,16 +16,13 @@ export default async function AdminDashboardPage() {
     redirect("/")
   }
 
-  // ✅ 2. Set base URL
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+  const [totalUsers, totalNovels, pendingNovels] = await Promise.all([
+    prisma.user.count(),
+    prisma.novel.count(),
+    prisma.novel.count({ where: { status: "PENDING_APPROVAL" } }),
+  ])
 
-  // ✅ 3. Fetch user stats
-  const usersRes = await fetch(`${baseUrl}/api/users/stats`, { cache: "no-store" })
-  const usersData = usersRes.ok ? await usersRes.json() : { total: 0 }
-
-  // ✅ 4. Fetch novel stats
-  const novelsRes = await fetch(`${baseUrl}/api/novels/stats`, { cache: "no-store" })
-  const novelsData = novelsRes.ok ? await novelsRes.json() : { total: 0, pending: 0 }
+  const hasPending = pendingNovels > 0
 
   // ✅ 5. Page UI
   return (
@@ -41,7 +40,7 @@ export default async function AdminDashboardPage() {
               <Users className="h-6 w-6 text-muted-foreground" />
               <h3 className="text-lg font-medium text-muted-foreground">Total Users</h3>
             </div>
-            <p className="text-5xl font-bold">{usersData.total?.toLocaleString() || 0}</p>
+            <p className="text-5xl font-bold">{totalUsers.toLocaleString()}</p>
           </div>
 
           {/* Total Novels */}
@@ -50,17 +49,25 @@ export default async function AdminDashboardPage() {
               <BookOpen className="h-6 w-6 text-muted-foreground" />
               <h3 className="text-lg font-medium text-muted-foreground">Total Novels</h3>
             </div>
-            <p className="text-5xl font-bold">{novelsData.total?.toLocaleString() || 0}</p>
+            <p className="text-5xl font-bold">{totalNovels.toLocaleString()}</p>
           </div>
 
           {/* Pending Reviews */}
-          <div className="rounded-3xl border-2 border-border bg-card p-8">
-            <div className="flex items-center gap-3 mb-3">
-              <AlertCircle className="h-6 w-6 text-muted-foreground" />
-              <h3 className="text-lg font-medium text-muted-foreground">Pending Reviews</h3>
+          <Link href="/admin/novels/pending" className="block">
+            <div
+              className={cn(
+                "rounded-3xl border-2 border-border bg-card p-8 transition-colors",
+                hasPending && "border-destructive/60 bg-destructive/10",
+              )}
+            >
+              <div className="mb-3 flex items-center gap-3">
+                <AlertCircle className={cn("h-6 w-6", hasPending ? "text-destructive" : "text-muted-foreground")} />
+                <h3 className="text-lg font-medium text-muted-foreground">Pending Reviews</h3>
+              </div>
+              <p className="text-5xl font-bold">{pendingNovels}</p>
+              {hasPending && <p className="mt-2 text-sm text-destructive">Action required</p>}
             </div>
-            <p className="text-5xl font-bold">{novelsData.pending || 0}</p>
-          </div>
+          </Link>
         </div>
 
         {/* Quick Actions */}

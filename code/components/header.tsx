@@ -36,7 +36,7 @@ export async function Header({ initialQuery }: HeaderProps = {}) {
               <BarChart3 className="h-6 w-6" />
             </Link>
           )}
-          {user && role && ["author", "writer", "admin", "developer", "superadmin"].includes(role) && (
+          {user && role && ["author", "writer", "developer", "superadmin"].includes(role) && (
             <Link href="/author" className="text-foreground hover:text-muted-foreground">
               <Star className="h-6 w-6" />
             </Link>

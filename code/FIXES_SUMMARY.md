@@ -1,3 +1,16 @@
+# Fixes Applied - November 16, 2025
+
+## Highlights
+
+- Expanded the advanced SQL installer so it now provisions:
+   - `log_user_deletions` trigger plus a `deleted_users_log` audit table.
+   - Stored procedures for wishlist (`AddToWishlist`/`RemoveFromWishlist`) and follows (`FollowAuthor`/`UnfollowAuthor`).
+   - A `GetTrendingNovels` procedure that ranks titles by views, likes, and recent reviews.
+- `app/api/wishlist/route.ts` and `app/api/follows/route.ts` now delegate their mutations to the new stored procedures to satisfy the rubric’s database-integration requirement.
+- Introduced `GET /api/novels/trending` which calls the `GetTrendingNovels` procedure; home and browse pages use it for the trending rails.
+- Seeding script mirrors the updated installer so local environments pick up the new trigger, audit log, and procedures automatically.
+- Added `/api/profile` PATCH endpoint and `BioForm` component so readers can update their bio from the profile page with a prominent call-to-action.
+
 # Fixes Applied - November 15, 2025
 
 ## Highlights

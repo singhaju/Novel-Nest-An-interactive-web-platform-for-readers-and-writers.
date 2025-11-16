@@ -16,7 +16,7 @@ export default async function HomePage() {
 
   const [recommendedRes, trendingRes, freshRes, fantasyRes] = await Promise.all([
     apiClient.getNovels({ limit: 12, status: "ONGOING" }),
-    apiClient.getNovels({ limit: 10, status: "ONGOING", offset: 2 }),
+    apiClient.getTrendingNovels({ timePeriod: "weekly" }),
     apiClient.getNovels({ limit: 10, status: "ONGOING", offset: 12 }),
     apiClient.getNovels({ limit: 8, genre: "fantasy" }),
   ])

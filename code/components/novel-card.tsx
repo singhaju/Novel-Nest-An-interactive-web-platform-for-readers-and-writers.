@@ -2,19 +2,21 @@ import Link from "next/link"
 import Image from "next/image"
 import type { Novel } from "@/lib/types/database"
 import { Eye, Heart, List } from "lucide-react"
+import { normalizeCoverImageUrl } from "@/lib/utils"
 
 interface NovelCardProps {
   novel: Novel & { author?: { username: string } }
 }
 
 export function NovelCard({ novel }: NovelCardProps) {
-  const coverSrc = novel.cover_url && novel.cover_url.trim().length > 0 ? novel.cover_url : "/placeholder.svg"
+  const normalizedCover = normalizeCoverImageUrl(novel.cover_url)
+  const coverSrc = normalizedCover && normalizedCover.trim().length > 0 ? normalizedCover : "/placeholder.svg"
 
   return (
     <Link href={`/novel/${novel.id}`} className="group">
       <div className="space-y-2">
         {/* Cover Image */}
-        <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-gradient-to-br from-blue-100 to-green-100">
+  <div className="relative aspect-3/4 overflow-hidden rounded-2xl bg-linear-to-br from-blue-100 to-green-100">
           <Image
             src={coverSrc}
             alt={novel.title}

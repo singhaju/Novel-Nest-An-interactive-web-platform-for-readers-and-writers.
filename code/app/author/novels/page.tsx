@@ -9,12 +9,12 @@ export default async function AuthorNovelsPage() {
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["writer", "admin", "developer", "superadmin"].includes(role)) {
+  if (!session || !["writer", "developer", "superadmin"].includes(role)) {
     redirect("/")
   }
 
   const authorId = Number.parseInt((session.user as any).id)
-  const canManageAll = ["admin", "developer", "superadmin"].includes(role)
+  const canManageAll = ["developer", "superadmin"].includes(role)
 
   const novels = await prisma.novel.findMany({
     where: canManageAll ? {} : { author_id: authorId },

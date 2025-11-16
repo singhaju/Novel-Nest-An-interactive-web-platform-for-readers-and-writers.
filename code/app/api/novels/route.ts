@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { uploadToGoogleDrive } from "@/lib/google-drive"
+import { DEFAULT_COVER_FOLDER_ID, uploadToGoogleDrive } from "@/lib/google-drive"
+import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 // GET /api/novels - Get all novels with filters
 export async function GET(request: NextRequest) {
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
       title: n.title,
       author_id: String(n.author_id),
       summary: n.description || undefined,
-      cover_url: n.cover_image || undefined,
+      cover_url: normalizeCoverImageUrl(n.cover_image) || undefined,
       status: (n.status || "").toLowerCase(),
       total_views: n.views ?? 0,
       total_likes: n.likes ?? 0,
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
         ? {
             id: String(n.author.user_id),
             username: n.author.username,
-            avatar_url: n.author.profile_picture || undefined,
+            avatar_url: normalizeProfileImageUrl(n.author.profile_picture) || undefined,
           }
         : undefined,
     }))
@@ -199,12 +200,13 @@ export async function POST(request: NextRequest) {
     // Upload cover image to Google Drive if provided
     if (coverImage) {
       const buffer = Buffer.from(await coverImage.arrayBuffer())
-      coverImageUrl = await uploadToGoogleDrive({
+      const rawUrl = await uploadToGoogleDrive({
         fileName: `cover_${Date.now()}_${coverImage.name}`,
         mimeType: coverImage.type,
         fileContent: buffer,
-        folderId: process.env.GOOGLE_DRIVE_COVERS_FOLDER_ID,
+  folderId: DEFAULT_COVER_FOLDER_ID,
       })
+      coverImageUrl = normalizeCoverImageUrl(rawUrl) || rawUrl
     }
 
     const novel = await prisma.novel.create({
@@ -221,12 +223,24 @@ export async function POST(request: NextRequest) {
           select: {
             user_id: true,
             username: true,
+            profile_picture: true,
           },
         },
       },
     })
 
-    return NextResponse.json(novel, { status: 201 })
+    const responsePayload = {
+      ...novel,
+      cover_image: normalizeCoverImageUrl(novel.cover_image) ?? undefined,
+      author: novel.author
+        ? {
+            ...novel.author,
+            profile_picture: normalizeProfileImageUrl(novel.author.profile_picture) ?? undefined,
+          }
+        : novel.author,
+    }
+
+    return NextResponse.json(responsePayload, { status: 201 })
   } catch (error) {
     console.error("Error creating novel:", error)
     return NextResponse.json({ error: "Failed to create novel" }, { status: 500 })

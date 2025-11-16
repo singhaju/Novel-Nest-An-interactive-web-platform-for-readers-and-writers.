@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 // GET /api/novels/[id] - Get a single novel
 // handle both Promise and direct params shape to satisfy Next.js type variations
@@ -70,7 +71,25 @@ export async function GET(request: NextRequest, context: any) {
       data: { views: { increment: 1 } },
     })
 
-    return NextResponse.json(novel)
+    const normalizedNovel = {
+      ...novel,
+      cover_image: normalizeCoverImageUrl(novel.cover_image) ?? null,
+      author: novel.author
+        ? {
+            ...novel.author,
+            profile_picture: normalizeProfileImageUrl(novel.author.profile_picture) ?? null,
+          }
+        : novel.author,
+      reviews: novel.reviews.map((review) => ({
+        ...review,
+        user: {
+          ...review.user,
+          profile_picture: normalizeProfileImageUrl(review.user.profile_picture) ?? null,
+        },
+      })),
+    }
+
+    return NextResponse.json(normalizedNovel)
   } catch (error) {
     console.error("Error fetching novel:", error)
     return NextResponse.json({ error: "Failed to fetch novel" }, { status: 500 })

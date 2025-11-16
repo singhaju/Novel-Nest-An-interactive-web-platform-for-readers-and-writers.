@@ -73,25 +73,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (existing) {
-      // Unfollow
-      await prisma.userFollow.delete({
-        where: {
-          follower_id_following_id: {
-            follower_id: userId,
-            following_id: authorId,
-          },
-        },
-      })
+      await prisma.$executeRaw`CALL UnfollowAuthor(${userId}, ${authorId})`
 
       return NextResponse.json({ action: "unfollowed" })
     } else {
-      // Follow
-      await prisma.userFollow.create({
-        data: {
-          follower_id: userId,
-          following_id: authorId,
-        },
-      })
+      await prisma.$executeRaw`CALL FollowAuthor(${userId}, ${authorId})`
 
       return NextResponse.json({ action: "followed" })
     }
