@@ -7,10 +7,8 @@ import {
   incrementNovelViews,
   updateNovel as updateNovelRecord,
 } from "@/lib/repositories/novels"
-<<<<<<< Updated upstream
 import { approveAllEpisodesForNovel } from "@/lib/repositories/episodes"
-=======
->>>>>>> Stashed changes
+import { DEFAULT_COVER_FOLDER_ID, uploadToGoogleDrive } from "@/lib/google-drive"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
 // GET /api/novels/[id] - Get a single novel
@@ -103,29 +101,13 @@ export async function PATCH(request: NextRequest, context: any) {
     const privilegedRoles = ["admin", "developer", "superadmin"]
     const isPrivileged = privilegedRoles.includes(userRole)
 
-<<<<<<< Updated upstream
     if (novel.author_id !== userId && !isPrivileged) {
-=======
-    if (novel.author_id !== userId && !["admin", "developer", "superadmin"].includes(userRole)) {
->>>>>>> Stashed changes
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const contentType = request.headers.get("content-type") || ""
     const payload: Record<string, any> = {}
-<<<<<<< Updated upstream
-    if (typeof body.title === "string") payload.title = body.title
-    if (typeof body.description === "string") payload.description = body.description
-    if (typeof body.cover_image === "string") payload.cover_image = body.cover_image
-    if (typeof body.tags === "string") payload.tags = body.tags
-
-    const requestedStatus = typeof body.status === "string" ? body.status.toUpperCase() : undefined
-    if (requestedStatus) {
-      if (!isPrivileged) {
-        return NextResponse.json({ error: "Status updates require admin access" }, { status: 403 })
-      }
-      payload.status = requestedStatus
-=======
+    let requestedStatus: string | undefined
 
     const normaliseTags = (value: unknown) => {
       if (typeof value !== "string") return
@@ -144,13 +126,26 @@ export async function PATCH(request: NextRequest, context: any) {
       payload.tags = normalized
     }
 
+    const enforceStatusPermission = () => {
+      if (!requestedStatus) {
+        return
+      }
+      if (!isPrivileged) {
+        throw new Error("STATUS_FORBIDDEN")
+      }
+      payload.status = requestedStatus
+    }
+
     if (contentType.includes("application/json")) {
       const body = await request.json()
       if (typeof body.title === "string") payload.title = body.title
       if (typeof body.description === "string") payload.description = body.description
       if (typeof body.cover_image === "string" || body.cover_image === null) payload.cover_image = body.cover_image
       if (typeof body.tags === "string") normaliseTags(body.tags)
-      if (typeof body.status === "string") payload.status = body.status.toUpperCase()
+      if (typeof body.status === "string") {
+        requestedStatus = body.status.toUpperCase()
+      }
+      enforceStatusPermission()
     } else if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData()
       const title = formData.get("title")
@@ -167,7 +162,7 @@ export async function PATCH(request: NextRequest, context: any) {
         payload.description = description
       }
       if (typeof status === "string" && status.trim().length > 0) {
-        payload.status = status.trim().toUpperCase()
+        requestedStatus = status.trim().toUpperCase()
       }
       if (typeof tags === "string" && tags.length > 0) {
         normaliseTags(tags)
@@ -185,6 +180,7 @@ export async function PATCH(request: NextRequest, context: any) {
         })
         payload.cover_image = normalizeCoverImageUrl(rawUrl) || rawUrl
       }
+      enforceStatusPermission()
     } else {
       // Fallback: attempt to parse json
       const body = await request.json().catch(() => ({}))
@@ -192,12 +188,14 @@ export async function PATCH(request: NextRequest, context: any) {
       if (typeof body.description === "string") payload.description = body.description
       if (typeof body.cover_image === "string" || body.cover_image === null) payload.cover_image = body.cover_image
       if (typeof body.tags === "string") normaliseTags(body.tags)
-      if (typeof body.status === "string") payload.status = body.status.toUpperCase()
+      if (typeof body.status === "string") {
+        requestedStatus = body.status.toUpperCase()
+      }
+      enforceStatusPermission()
     }
 
     if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: "No changes provided" }, { status: 400 })
->>>>>>> Stashed changes
     }
 
     const updatedNovel = await updateNovelRecord(novelId, payload)
@@ -212,6 +210,9 @@ export async function PATCH(request: NextRequest, context: any) {
 
     return NextResponse.json(updatedNovel)
   } catch (error) {
+    if (error instanceof Error && error.message === "STATUS_FORBIDDEN") {
+      return NextResponse.json({ error: "Status updates require admin access" }, { status: 403 })
+    }
     console.error("Error updating novel:", error)
     return NextResponse.json({ error: "Failed to update novel" }, { status: 500 })
   }

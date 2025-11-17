@@ -1,11 +1,8 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-<<<<<<< Updated upstream
 import { Badge } from "@/components/ui/badge"
-=======
 import { NovelGenreEditor } from "@/components/novel-genre-editor"
 import { NovelCoverEditor } from "@/components/novel-cover-editor"
->>>>>>> Stashed changes
 import { auth } from "@/lib/auth"
 import { getNovelDetail } from "@/lib/repositories/novels"
 import { parseGenresFromString } from "@/lib/genres"
@@ -48,7 +45,6 @@ export default async function ManageNovelPage(
 
   const novel = detail.novel
   const episodes = detail.episodes
-<<<<<<< Updated upstream
   const normalizedNovelStatus = (novel.status ?? "").toLowerCase().replace(/\s+/g, "_")
   const defaultEpisodeStatus =
     normalizedNovelStatus === "pending_approval"
@@ -110,10 +106,8 @@ export default async function ManageNovelPage(
       label: "Status unknown",
     },
   }
-=======
   const initialGenres = parseGenresFromString(novel.tags)
   const coverUrl = normalizeCoverImageUrl(novel.cover_image ?? undefined) ?? null
->>>>>>> Stashed changes
 
   return (
     <div className="min-h-screen bg-background">
