@@ -10,6 +10,7 @@ interface HeaderProps {
 
 export async function Header({ initialQuery }: HeaderProps = {}) {
   const user = await getCurrentUser()
+  const role = typeof user?.role === "string" ? user.role.toLowerCase() : undefined
 
   return (
     <header className="border-b border-border bg-background">
@@ -27,15 +28,15 @@ export async function Header({ initialQuery }: HeaderProps = {}) {
 
         {/* Right Icons */}
         <div className="flex items-center gap-4">
-          {user && (user.role === "admin" || user.role === "developer") && (
+          {user && role && ["admin", "superadmin", "developer"].includes(role) && (
             <Link
-              href={user.role === "admin" ? "/admin" : "/developer"}
+              href={role === "developer" ? "/developer" : "/admin"}
               className="text-foreground hover:text-muted-foreground"
             >
               <BarChart3 className="h-6 w-6" />
             </Link>
           )}
-          {user && user.role === "author" && (
+          {user && role && ["author", "writer", "superadmin"].includes(role) && (
             <Link href="/author" className="text-foreground hover:text-muted-foreground">
               <Star className="h-6 w-6" />
             </Link>

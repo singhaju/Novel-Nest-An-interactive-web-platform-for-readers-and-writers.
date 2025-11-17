@@ -1,4 +1,4 @@
-export type UserRole = "reader" | "writer" | "author" | "admin" | "developer"
+export type UserRole = "reader" | "writer" | "author" | "admin" | "developer" | "superadmin"
 export type NovelStatus = "ongoing" | "completed" | "hiatus" | "pending_approval"
 
 export interface Profile {

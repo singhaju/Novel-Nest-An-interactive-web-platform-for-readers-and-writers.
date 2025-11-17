@@ -1,38 +1,72 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listNovelsForManagement } from "@/lib/repositories/novels"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { BookOpen, FileText, Eye } from "lucide-react"
+import { BookOpen, FileText, Eye, Clock } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 
 export default async function AuthorDashboardPage() {
   const session = await auth()
 
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
-  if (!session || !["writer", "admin", "developer"].includes(role)) {
+  if (!session || !["author", "writer", "superadmin"].includes(role)) {
     redirect("/")
   }
 
   const authorId = Number.parseInt((session.user as any).id)
 
-  const novels = await prisma.novel.findMany({
-    where: { author_id: authorId },
-    include: {
-      _count: { select: { episodes: true } },
+  const novels = await listNovelsForManagement({ authorId })
+
+  const hasPendingEpisodes = (novel: (typeof novels)[number]) => Number(novel.pending_episode_count ?? 0) > 0
+  const isNovelUnderReview = (novel: (typeof novels)[number]) => {
+    const baseStatus = (novel.status ?? "").toUpperCase()
+    return baseStatus === "PENDING_APPROVAL" || hasPendingEpisodes(novel)
+  }
+
+  const totalEpisodes = novels.reduce((sum, novel) => sum + Number(novel.episode_count ?? 0), 0)
+  const totalViews = novels.reduce((sum, novel) => sum + Number(novel.views ?? 0), 0)
+  const pendingNovels = novels.filter(isNovelUnderReview)
+
+  const recentNovels = novels.slice(0, 6)
+
+  const statusStyles: Record<string, { label: string; className: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
+    pending_approval: {
+      label: "In review",
+      className: "border-amber-300 bg-amber-100 px-3 py-1 text-amber-900",
+      variant: "outline",
     },
-    orderBy: { last_update: "desc" },
-  })
+    approved: {
+      label: "Approved",
+      className: "border-emerald-300 bg-emerald-100 px-3 py-1 text-emerald-900",
+      variant: "outline",
+    },
+    denial: {
+      label: "Denial",
+      className: "border-rose-300 bg-rose-100 px-3 py-1 text-rose-900",
+      variant: "outline",
+    },
+  }
 
-  const totalEpisodes = novels.reduce((sum, novel) => sum + (novel._count?.episodes ?? 0), 0)
-  const totalViews = novels.reduce((sum, novel) => sum + (novel.views ?? 0), 0)
-
-  const recentNovels = novels.slice(0, 6).map((novel) => ({
-    id: novel.novel_id,
-    title: novel.title,
-    status: novel.status.toLowerCase(),
-    views: novel.views ?? 0,
-  }))
+  const statusAliases: Record<string, string> = {
+    pending: "pending_approval",
+    pending_approval: "pending_approval",
+    in_review: "pending_approval",
+    review: "pending_approval",
+    reviewing: "pending_approval",
+    approved: "approved",
+    approval: "approved",
+    on_going: "approved",
+    ongoing: "approved",
+    completed: "approved",
+    hiatus: "approved",
+    published: "approved",
+    denial: "denial",
+    denied: "denial",
+    rejected: "denial",
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,6 +74,26 @@ export default async function AuthorDashboardPage() {
 
       <main className="container mx-auto px-4 py-8">
         <h1 className="mb-8 text-3xl font-bold text-foreground">Author Dashboard</h1>
+
+        {pendingNovels.length > 0 && (
+          <Alert className="mb-6 border-amber-300 bg-amber-100 dark:border-amber-400 dark:bg-amber-500/15 dark:text-amber-900">
+            <Clock className="text-black dark:text-amber-200" />
+            <AlertTitle>Novels under review</AlertTitle>
+            <AlertDescription>
+              {pendingNovels.length === 1 ? (
+                <p>
+                  <strong>{pendingNovels[0].title}</strong> is pending admin approval. We&apos;ll notify you as soon as it&apos;s
+                  published.
+                </p>
+              ) : (
+                <p>
+                  {pendingNovels.length} of your novels are currently being reviewed. You can keep an eye on their
+                  status in the Manage Novels page.
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="mb-12 grid gap-6 md:grid-cols-3">
           <div className="rounded-3xl border-2 border-border bg-card p-6">
@@ -93,19 +147,36 @@ export default async function AuthorDashboardPage() {
 
           {recentNovels.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {recentNovels.map((novel) => (
-                <Link
-                  key={novel.id}
-                  href={`/author/novels/${novel.id}`}
-                  className="rounded-2xl border border-border bg-card p-6 transition-colors hover:bg-accent"
-                >
-                  <h3 className="mb-2 text-lg font-semibold">{novel.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="capitalize">{novel.status}</span>
-                    <span>{novel.views.toLocaleString()} views</span>
-                  </div>
-                </Link>
-              ))}
+              {recentNovels.map((novel) => {
+                const normalizedStatus = (novel.status ?? "").toLowerCase().replace(/\s+/g, "_")
+                const statusKey = statusAliases[normalizedStatus] ?? normalizedStatus
+                const statusStyle = statusStyles[statusKey]
+                const badgeLabel = statusStyle?.label ?? statusKey.replace(/_/g, " ")
+                const badgeVariant = statusStyle?.variant ?? "secondary"
+                const badgeClassName = ["capitalize", statusStyle?.className ?? ""].filter(Boolean).join(" ")
+                const pendingEpisodes = hasPendingEpisodes(novel)
+
+                return (
+                  <Link
+                    key={novel.novel_id}
+                    href={`/author/novels/${novel.novel_id}`}
+                    className="rounded-2xl border border-border bg-card p-6 transition-colors hover:bg-accent"
+                  >
+                    <h3 className="mb-2 text-lg font-semibold">{novel.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <Badge variant={badgeVariant} className={badgeClassName}>
+                        {badgeLabel}
+                      </Badge>
+                      {pendingEpisodes && (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-900">
+                          Episodes pending review
+                        </Badge>
+                      )}
+                      <span>{Number(novel.views ?? 0).toLocaleString()} views</span>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-card p-12 text-center">

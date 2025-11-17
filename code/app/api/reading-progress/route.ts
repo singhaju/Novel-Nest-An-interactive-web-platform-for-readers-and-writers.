@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { updateReadingProgress } from "@/lib/repositories/reading-progress"
 
 // POST /api/reading-progress - Update reading progress
 export async function POST(request: NextRequest) {
@@ -12,30 +12,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { novelId, episodeId } = body
+    const novelId = Number.parseInt(String(body.novelId))
+    const episodeId = Number.parseInt(String(body.episodeId))
 
-    if (!novelId || !episodeId) {
+    if (Number.isNaN(novelId) || Number.isNaN(episodeId)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     const userId = Number.parseInt((session.user as any).id)
 
-    const progress = await prisma.userReadingProgress.upsert({
-      where: {
-        user_id_novel_id: {
-          user_id: userId,
-          novel_id: novelId,
-        },
-      },
-      update: {
-        last_read_episode_id: episodeId,
-      },
-      create: {
-        user_id: userId,
-        novel_id: novelId,
-        last_read_episode_id: episodeId,
-      },
-    })
+    const progress = await updateReadingProgress(userId, novelId, episodeId)
+
+    if (!progress) {
+      return NextResponse.json({ error: "Failed to persist reading progress" }, { status: 500 })
+    }
 
     return NextResponse.json(progress)
   } catch (error) {

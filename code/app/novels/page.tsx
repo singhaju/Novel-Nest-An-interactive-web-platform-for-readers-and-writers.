@@ -97,26 +97,45 @@ export default async function NovelsPage({ searchParams }: NovelsPageProps) {
   const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : searchParams
   const rawQuery = resolvedSearchParams?.q
   const query = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
+  const rawSort = resolvedSearchParams?.sort
+  const sort = Array.isArray(rawSort) ? rawSort[0] : rawSort
+  const rawTimePeriod = resolvedSearchParams?.timePeriod
+  const timePeriod = Array.isArray(rawTimePeriod) ? rawTimePeriod[0] : rawTimePeriod
+  const normalizedPeriod = typeof timePeriod === "string" ? timePeriod.toLowerCase() : undefined
+  const allowedPeriods = new Set(["daily", "weekly", "monthly", "all"])
+  const safeTimePeriod = normalizedPeriod && allowedPeriods.has(normalizedPeriod) ? normalizedPeriod : "weekly"
 
   const normalizedQuery = query?.trim()
   const limit = normalizedQuery ? 60 : 80
-  const data = await apiClient.getNovels({ status: "ongoing,completed", query: normalizedQuery || undefined, limit })
-  const novels = (data.novels ?? []) as NovelWithAuthor[]
-  const sections = normalizedQuery ? [] : groupNovelsByTag(novels)
+  const isTrendingSort = sort === "trending"
 
-  const heading = normalizedQuery ? `Results for "${normalizedQuery}"` : "Browse by Tag"
-  const totalResults = data.total ?? novels.length
+  const data = isTrendingSort
+  ? await apiClient.getTrendingNovels({ timePeriod: safeTimePeriod as any })
+    : await apiClient.getNovels({ status: "ongoing,completed", query: normalizedQuery || undefined, limit })
+
+  const novels = (data.novels ?? []) as NovelWithAuthor[]
+  const sections = normalizedQuery || isTrendingSort ? [] : groupNovelsByTag(novels)
+
+  const heading = normalizedQuery
+    ? `Results for "${normalizedQuery}"`
+    : isTrendingSort
+      ? "Trending Novels"
+      : "Browse by Tag"
+
+  const totalResults = isTrendingSort ? novels.length : data.total ?? novels.length
   const description = normalizedQuery
     ? totalResults === 0
       ? "No novels matched your search."
       : totalResults === 1
         ? "Found 1 match"
         : `Found ${totalResults} matches`
-    : sections.length === 0
-      ? "We couldn't find any tagged novels yet. Check back soon."
-      : "Discover stories grouped by the tags our readers love most."
+    : isTrendingSort
+      ? `Top stories ranked by views, likes, and recent review activity (${safeTimePeriod}).`
+      : sections.length === 0
+        ? "We couldn't find any tagged novels yet. Check back soon."
+        : "Discover stories grouped by the tags our readers love most."
 
-  const shouldShowTagSections = !normalizedQuery && sections.length > 0
+  const shouldShowTagSections = !normalizedQuery && !isTrendingSort && sections.length > 0
 
   return (
     <div className="min-h-screen bg-background">

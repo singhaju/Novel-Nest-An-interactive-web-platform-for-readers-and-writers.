@@ -1,7 +1,8 @@
 import { Header } from "@/components/header"
 import { EditChapterForm } from "@/components/edit-chapter-form"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { findNovelById } from "@/lib/repositories/novels"
+import { findEpisodeWithNovel, listEpisodesByNovel } from "@/lib/repositories/episodes"
 import { getFileFromGoogleDrive } from "@/lib/google-drive"
 import { redirect, notFound } from "next/navigation"
 
@@ -31,7 +32,7 @@ export default async function EditEpisodePage(
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["writer", "admin", "developer"].includes(role)) {
+  if (!session || !["author", "writer", "admin", "superadmin"].includes(role)) {
     redirect("/")
   }
 
@@ -43,37 +44,21 @@ export default async function EditEpisodePage(
     notFound()
   }
 
-  const canManageAll = ["admin", "developer"].includes(role)
+  const canManageAll = role === "superadmin" || role === "admin"
 
-  const novel = await prisma.novel.findFirst({
-    where: canManageAll ? { novel_id: novelId } : { novel_id: novelId, author_id: userId },
-    select: {
-      title: true,
-    },
-  })
+  const novel = await findNovelById(novelId)
 
-  if (!novel) {
+  if (!novel || (!canManageAll && novel.author_id !== userId)) {
     notFound()
   }
 
-  const episode = await prisma.episode.findUnique({
-    where: { episode_id: episodeId },
-    select: {
-      title: true,
-      content: true,
-      novel_id: true,
-    },
-  })
+  const episode = await findEpisodeWithNovel(episodeId)
 
   if (!episode || episode.novel_id !== novelId) {
     notFound()
   }
 
-  const orderedEpisodes = await prisma.episode.findMany({
-    where: { novel_id: novelId },
-    orderBy: { episode_id: "asc" },
-    select: { episode_id: true },
-  })
+  const orderedEpisodes = await listEpisodesByNovel(novelId)
 
   const chapterNumber = orderedEpisodes.findIndex((item) => item.episode_id === episodeId) + 1
   const contentText = await resolveEpisodeContent(episode.content)

@@ -8,6 +8,16 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+    ],
   },
   // Set turbopack.root to ensure Turbopack uses this folder as the workspace
   // root when Next detects multiple lockfiles in parent folders.

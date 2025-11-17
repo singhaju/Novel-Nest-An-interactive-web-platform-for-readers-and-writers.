@@ -223,10 +223,10 @@ code/
 ├── scripts/
 │   ├── seed.js                    ← Node.js seeding script
 │   ├── seed_novels.sql            ← SQL data file
-│   └── SEEDING_GUIDE.md           ← Full documentation
+│   ├── SEEDING_GUIDE.md           ← Full documentation
+│   └── DATABASE_SCHEMA_REFERENCE.md ← ERD-style overview of tables
 ├── package.json                   ← Updated with seed script
-└── prisma/
-    └── schema.prisma              ← Prisma schema
+└── lib/db                         ← mysql2 helpers used by the app/seed
 ```
 
 ---

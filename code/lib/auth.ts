@@ -1,10 +1,11 @@
 // /code/lib/auth.ts
 import NextAuth from "next-auth"
 import { getServerSession } from "next-auth"
-import CredentialsProvider,  { type CredentialsConfig } from "next-auth/providers/credentials"
+import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import bcrypt from "bcryptjs"
-import { prisma } from "./prisma"
+import { hashPassword, verifyPassword } from "./security"
+import { findUserById, findUserByUsernameOrEmail, updateUserPassword } from "./repositories/users"
+import { normalizeProfileImageUrl } from "./utils"
 
 // ✅ Define configuration as an object
 export const authConfig = {
@@ -14,30 +15,40 @@ export const authConfig = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       // @ts-expect-error - NextAuth type inference bug with CredentialsProvider
   async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.identifier || !credentials?.password) {
           throw new Error("Invalid credentials")
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+        const identifier = credentials.identifier.trim()
+
+        if (!identifier) {
+          throw new Error("Invalid credentials")
+        }
+
+        const user = await findUserByUsernameOrEmail(identifier)
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials")
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
+        const { valid, needsMigration } = await verifyPassword(credentials.password, user.password)
 
-        if (!isPasswordValid) {
+        if (!valid) {
           throw new Error("Invalid credentials")
+        }
+
+        if (needsMigration) {
+          const upgradedHash = hashPassword(credentials.password)
+          await updateUserPassword(user.user_id, upgradedHash)
+        }
+
+        if (user.is_banned) {
+          throw new Error("This account has been banned")
         }
 
         const normalizedRole = typeof user.role === "string" ? user.role.toLowerCase() : "reader"
@@ -63,7 +74,22 @@ export const authConfig = {
       if (user) {
         token.id = user.id
         token.role = typeof user.role === "string" ? user.role.toLowerCase() : token.role ?? "reader"
+        const normalizedProfile = normalizeProfileImageUrl((user as any).profile_picture)
+        token.profile_picture = normalizedProfile ?? token.profile_picture
+      } else if (token?.id) {
+        const userId = typeof token.id === "string" ? Number.parseInt(token.id, 10) : token.id
+
+        if (!Number.isNaN(userId)) {
+          const dbUser = await findUserById(userId)
+
+          if (dbUser) {
+            token.role = typeof dbUser.role === "string" ? dbUser.role.toLowerCase() : token.role ?? "reader"
+            const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture ?? undefined)
+            token.profile_picture = normalizedProfile ?? token.profile_picture
+          }
+        }
       }
+
       if (token.role && typeof token.role === "string") {
         token.role = token.role.toLowerCase()
       }
@@ -73,6 +99,29 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.id
         session.user.role = typeof token.role === "string" ? token.role.toLowerCase() : "reader"
+
+        const userId = typeof token.id === "string" ? Number.parseInt(token.id, 10) : token.id
+
+        if (!Number.isNaN(userId)) {
+          const dbUser = await findUserById(userId)
+
+          if (dbUser?.is_banned) {
+            return null
+          }
+
+          if (dbUser) {
+            session.user.username = dbUser.username
+            session.user.email = dbUser.email
+            const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture ?? undefined)
+            session.user.profile_picture = normalizedProfile ?? undefined
+            session.user.bio = dbUser.bio
+            token.profile_picture = normalizedProfile ?? token.profile_picture
+          }
+        }
+
+        if (!session.user.profile_picture && typeof token.profile_picture === "string") {
+          session.user.profile_picture = token.profile_picture
+        }
       }
       return session
     },

@@ -180,7 +180,7 @@ The application is ready to:
 | Seed Script | `code/scripts/seed_novels.sql` |
 | Seed Executor | `code/scripts/seed.js` |
 | Cover Images | `code/public/*.{jpg,webp}` |
-| Prisma Schema | `code/prisma/schema.prisma` |
+| Database Schema Reference | `code/scripts/DATABASE_SCHEMA_REFERENCE.md` |
 | Database Config | `code/.env` (DATABASE_URL) |
 | Dev Server | Running on localhost:3000 |
 

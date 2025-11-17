@@ -1,7 +1,9 @@
 "use client"
 
-import React, { useRef, useState } from "react"
-import Image from "next/image"
+import React, { useEffect, useRef, useState } from "react"
+import { useSession } from "next-auth/react"
+
+import { normalizeProfileImageUrl } from "@/lib/utils"
 
 type Props = {
   initialSrc?: string | null
@@ -9,10 +11,30 @@ type Props = {
 }
 
 export default function AvatarUploader({ initialSrc, username }: Props) {
+  const { data: session, update: refreshSession } = useSession()
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const [src, setSrc] = useState<string | undefined | null>(initialSrc ?? undefined)
+
+  const [src, setSrc] = useState<string | undefined | null>(normalizeProfileImageUrl(initialSrc))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof initialSrc === "string" && initialSrc.length > 0) {
+      setSrc(normalizeProfileImageUrl(initialSrc))
+      return
+    }
+
+    if (!initialSrc) {
+      setSrc((prev) => (prev ? prev : undefined))
+    }
+  }, [initialSrc])
+
+  useEffect(() => {
+    const sessionSrc = session?.user?.profile_picture
+    if (typeof sessionSrc === "string" && sessionSrc.length > 0) {
+      setSrc(normalizeProfileImageUrl(sessionSrc))
+    }
+  }, [session?.user?.profile_picture])
 
   const onChoose = () => {
     inputRef.current?.click()
@@ -51,23 +73,32 @@ export default function AvatarUploader({ initialSrc, username }: Props) {
         }
 
         const uploadJson = await uploadRes.json()
-        const driveUrl = uploadJson.url
+        console.debug("AvatarUploader: upload response", uploadJson)
+        const normalizedUploadUrl =
+          normalizeProfileImageUrl(uploadJson.url ?? uploadJson.rawUrl) ?? uploadJson.url ?? uploadJson.rawUrl
 
-        if (!driveUrl) {
+        if (!normalizedUploadUrl) {
           throw new Error('No URL returned from upload')
         }
 
         // Persist the Drive URL as the user's profile picture
-        const res = await fetch('/api/users/me/profile', {
-          method: 'PUT',
+        const res = await fetch('/api/profile', {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ profile_picture: driveUrl }),
+          body: JSON.stringify({ profilePicture: normalizedUploadUrl }),
         })
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}))
           throw new Error(json.error || `Failed to save profile (${res.status})`)
         }
+
+        const json = (await res.json().catch(() => ({}))) as { profilePicture?: string | null }
+        console.debug("AvatarUploader: profile update response", json)
+        const finalUrl =
+          normalizeProfileImageUrl(json?.profilePicture ?? normalizedUploadUrl) ?? normalizedUploadUrl
+        setSrc(finalUrl)
+  await refreshSession?.()
       } catch (err: any) {
         console.error(err)
         setError(err?.message || 'Failed to upload image')
@@ -81,11 +112,9 @@ export default function AvatarUploader({ initialSrc, username }: Props) {
 
   return (
     <div className="relative w-48 h-48">
-  <div className="relative aspect-square w-full h-full overflow-hidden rounded-full bg-linear-to-br from-blue-100 to-green-100">
+      <div className="relative aspect-square w-full h-full overflow-hidden rounded-full bg-linear-to-br from-blue-100 to-green-100">
         {src ? (
-          // use next/image to take advantage of optimization where possible
-          // fall back to simple img if src is a data URL (Next handles data URLs too)
-          <Image src={src} alt={username ?? "User"} fill className="object-cover" />
+          <img src={src} alt={username ?? "User"} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center">
             <div className="text-center p-4">

@@ -119,6 +119,27 @@ export const apiClient = {
     return res.json()
   },
 
+  async incrementNovelView(id: number) {
+    const res = await fetch(`${baseUrl}/api/novels/${id}/views`, { method: "POST" })
+    if (!res.ok) throw new Error("Failed to increment novel view")
+    return res.json()
+  },
+
+  async getTrendingNovels(params?: { timePeriod?: "daily" | "weekly" | "monthly" | "all" }) {
+    const searchParams = new URLSearchParams()
+    if (params?.timePeriod) {
+      searchParams.set("timePeriod", params.timePeriod)
+    }
+
+    const url = searchParams.size
+      ? `${baseUrl}/api/novels/trending?${searchParams.toString()}`
+      : `${baseUrl}/api/novels/trending`
+
+    const res = await fetch(url, { cache: "no-store" })
+    if (!res.ok) throw new Error("Failed to fetch trending novels")
+    return res.json()
+  },
+
   // ✅ Episodes
   async createEpisode(formData: FormData) {
     const res = await fetch(`${baseUrl}/api/episodes`, { method: "POST", body: formData })
@@ -132,6 +153,22 @@ export const apiClient = {
     return res.json()
   },
 
+  async updateEpisode(id: number, data: { title?: string; content?: string }) {
+    const res = await fetch(`${baseUrl}/api/episodes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error("Failed to update episode")
+    return res.json()
+  },
+
+  async deleteEpisode(id: number) {
+    const res = await fetch(`${baseUrl}/api/episodes/${id}`, { method: "DELETE" })
+    if (!res.ok) throw new Error("Failed to delete episode")
+    return res.json()
+  },
+
   // ✅ Reviews
   async createReview(data: { novelId: number; rating: number; comment?: string }) {
     const res = await fetch(`${baseUrl}/api/reviews`, {
@@ -139,7 +176,25 @@ export const apiClient = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
-    if (!res.ok) throw new Error("Failed to create review")
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}))
+      throw new Error(payload.error || "Failed to create review")
+    }
+    return res.json()
+  },
+
+  async updateReview(reviewId: number, data: { rating?: number; comment?: string | null }) {
+    const res = await fetch(`${baseUrl}/api/reviews/${reviewId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}))
+      throw new Error(payload.error || "Failed to update review")
+    }
+
     return res.json()
   },
 
@@ -157,6 +212,22 @@ export const apiClient = {
       body: JSON.stringify(data),
     })
     if (!res.ok) throw new Error("Failed to create comment")
+    return res.json()
+  },
+
+  async updateComment(commentId: number, data: { content: string }) {
+    const res = await fetch(`${baseUrl}/api/comments/${commentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error("Failed to update comment")
+    return res.json()
+  },
+
+  async deleteComment(commentId: number) {
+    const res = await fetch(`${baseUrl}/api/comments/${commentId}`, { method: "DELETE" })
+    if (!res.ok) throw new Error("Failed to delete comment")
     return res.json()
   },
 
@@ -202,6 +273,20 @@ export const apiClient = {
   async checkFollow(authorId: number) {
     const res = await fetch(`${baseUrl}/api/follows?authorId=${authorId}`, { cache: "no-store" })
     if (!res.ok) throw new Error("Failed to check follow status")
+    return res.json()
+  },
+
+  async installDbFeatures() {
+    const res = await fetch(`${baseUrl}/api/admin/db-features`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || "Failed to install database features")
+    }
+
     return res.json()
   }
 }

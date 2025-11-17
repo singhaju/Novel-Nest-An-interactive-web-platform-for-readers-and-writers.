@@ -1,10 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { getFileFromGoogleDrive, uploadToGoogleDrive } from "@/lib/google-drive"
+import { deleteCommentsByEpisode } from "@/lib/repositories/comments"
+import {
+  countPendingEpisodesByNovel,
+  deleteEpisode,
+  findEpisodeWithNovel,
+  updateEpisode,
+} from "@/lib/repositories/episodes"
+import { updateNovel } from "@/lib/repositories/novels"
 
-function extractEpisodeId(context: any) {
-  const rawParams = context?.params instanceof Promise ? context.params : context?.params
+async function extractEpisodeId(context: any) {
+  const rawParams = context?.params instanceof Promise ? await context.params : context?.params
   return rawParams
 }
 
@@ -26,7 +33,7 @@ async function safeGetEpisodeContent(content: string | null) {
 }
 
 // GET /api/episodes/[id] - Get episode with content
-export async function GET(request: NextRequest, context: any) {
+export async function GET(_request: NextRequest, context: any) {
   const params = await extractEpisodeId(context)
   try {
     const episodeId = Number.parseInt(params?.id)
@@ -35,18 +42,7 @@ export async function GET(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Invalid episode id" }, { status: 400 })
     }
 
-    const episode = await prisma.episode.findUnique({
-      where: { episode_id: episodeId },
-      include: {
-        novel: {
-          select: {
-            novel_id: true,
-            title: true,
-            author_id: true,
-          },
-        },
-      },
-    })
+    const episode = await findEpisodeWithNovel(episodeId)
 
     if (!episode) {
       return NextResponse.json({ error: "Episode not found" }, { status: 404 })
@@ -55,7 +51,17 @@ export async function GET(request: NextRequest, context: any) {
     const content = await safeGetEpisodeContent(episode.content)
 
     return NextResponse.json({
-      ...episode,
+      episode_id: episode.episode_id,
+      novel_id: episode.novel_id,
+      title: episode.title,
+      status: episode.status,
+      content: episode.content,
+      release_date: episode.release_date,
+      novel: {
+        novel_id: episode.novel_id,
+        title: episode.novel_title,
+        author_id: episode.author_id,
+      },
       contentText: content,
     })
   } catch (error) {
@@ -80,36 +86,39 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { title, content } = body
+    const body = await request.json().catch(() => null)
+    const title = typeof body?.title === "string" ? body.title.trim() : undefined
+    const content = typeof body?.content === "string" ? body.content : undefined
+    const requestedStatusRaw = typeof body?.status === "string" ? body.status.trim().toUpperCase() : undefined
+    const allowedStatuses = ["PENDING_APPROVAL", "APPROVED", "DENIAL"] as const
 
-    const episode = await prisma.episode.findUnique({
-      where: { episode_id: episodeId },
-      select: {
-        novel_id: true,
-        content: true,
-        novel: {
-          select: { author_id: true },
-        },
-      },
-    })
+    const episode = await findEpisodeWithNovel(episodeId)
 
     if (!episode) {
       return NextResponse.json({ error: "Episode not found" }, { status: 404 })
     }
 
     const userId = Number.parseInt((session.user as any).id)
-    if (episode.novel.author_id !== userId) {
+    const roleRaw = (session.user as any).role
+    const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : "reader"
+    const authoringRoles = ["author", "writer", "admin", "superadmin"]
+    if (!authoringRoles.includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+    const privilegedRoles = ["admin", "superadmin"]
+    const isPrivileged = privilegedRoles.includes(role)
+
+    if (episode.author_id !== userId && !isPrivileged) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const updateData: Record<string, string> = {}
+    const updateData: { title?: string; content?: string; status?: string } = {}
 
     if (title) {
       updateData.title = title
     }
 
-    if (typeof content === "string") {
+    if (typeof content === "string" && content.length > 0) {
       updateData.content = content
       try {
         const newContentUrl = await uploadToGoogleDrive({
@@ -124,20 +133,42 @@ export async function PATCH(request: NextRequest, context: any) {
       }
     }
 
+    if (requestedStatusRaw) {
+      if (!isPrivileged) {
+        return NextResponse.json({ error: "Status updates require admin access" }, { status: 403 })
+      }
+
+      if (!allowedStatuses.includes(requestedStatusRaw as (typeof allowedStatuses)[number])) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      }
+
+      updateData.status = requestedStatusRaw
+    }
+
+    if (!isPrivileged) {
+      updateData.status = "PENDING_APPROVAL"
+    }
+
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: "No updates provided" }, { status: 400 })
     }
 
-    const updatedEpisode = await prisma.episode.update({
-      where: { episode_id: episodeId },
-      data: updateData,
-      select: {
-        episode_id: true,
-        novel_id: true,
-        title: true,
-        release_date: true,
-      },
-    })
+    const updatedEpisode = await updateEpisode(episodeId, updateData)
+
+    if (!updatedEpisode) {
+      return NextResponse.json({ error: "Episode not found" }, { status: 404 })
+    }
+
+    if (!isPrivileged) {
+      await updateNovel(episode.novel_id, { status: "PENDING_APPROVAL" })
+    } else if (requestedStatusRaw === "APPROVED") {
+      const remainingPending = await countPendingEpisodesByNovel(episode.novel_id)
+      if (remainingPending === 0) {
+        await updateNovel(episode.novel_id, { status: "ONGOING" })
+      }
+    } else if (requestedStatusRaw === "DENIAL") {
+      await updateNovel(episode.novel_id, { status: "PENDING_APPROVAL" })
+    }
 
     return NextResponse.json(updatedEpisode)
   } catch (error) {
@@ -162,27 +193,27 @@ export async function DELETE(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const episode = await prisma.episode.findUnique({
-      where: { episode_id: episodeId },
-      select: {
-        content: true,
-        novel: {
-          select: { author_id: true },
-        },
-      },
-    })
+    const episode = await findEpisodeWithNovel(episodeId)
 
     if (!episode) {
       return NextResponse.json({ error: "Episode not found" }, { status: 404 })
     }
 
     const userId = Number.parseInt((session.user as any).id)
-    if (episode.novel.author_id !== userId) {
+    const roleRaw = (session.user as any).role
+    const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : "reader"
+    const authoringRoles = ["author", "writer", "admin", "superadmin"]
+    if (!authoringRoles.includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+    const privilegedRoles = ["admin", "superadmin"]
+
+    if (episode.author_id !== userId && !privilegedRoles.includes(role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    await prisma.comment.deleteMany({ where: { episode_id: episodeId } })
-    await prisma.episode.delete({ where: { episode_id: episodeId } })
+    await deleteCommentsByEpisode(episodeId)
+    await deleteEpisode(episodeId)
 
     return NextResponse.json({ message: "Episode deleted" }, { status: 200 })
   } catch (error) {

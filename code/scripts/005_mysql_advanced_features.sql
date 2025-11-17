@@ -1,0 +1,2 @@
+-- This file intentionally left blank.
+-- See 005_mysql_advanced_features.md for the full MySQL statements.

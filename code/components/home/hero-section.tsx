@@ -24,7 +24,7 @@ export function HeroSection({ featured, stats, isAuthenticated, role, personaliz
   const viewsFormatted = featured && typeof featured.total_views === "number" ? featured.total_views.toLocaleString() : "0"
   const startReadingHref = isAuthenticated
     ? "/novels"
-    : `/auth/login?callbackUrl=${encodeURIComponent("/novels")}`
+    : "/novels"
 
   const becomeCreatorHref =
     isAuthenticated && (role === "writer" || role === "author")
@@ -32,7 +32,7 @@ export function HeroSection({ featured, stats, isAuthenticated, role, personaliz
       : `/auth/login?callbackUrl=${encodeURIComponent("/author/novels/create")}`
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-foreground/5 via-background to-background">
+  <section className="relative overflow-hidden bg-linear-to-br from-foreground/5 via-background to-background">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.2),transparent_55%)]" />
       <div className="container mx-auto grid gap-12 px-4 py-16 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:items-center">
         <div className="space-y-8">
@@ -50,17 +50,10 @@ export function HeroSection({ featured, stats, isAuthenticated, role, personaliz
 
           <div className="flex flex-wrap items-center gap-4">
             <Button asChild size="lg">
-              {isAuthenticated ? (
-                <Link href={startReadingHref}>
-                  Start Reading
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              ) : (
-                <AuthWarningLink href={startReadingHref} className="flex items-center">
-                  Start Reading
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </AuthWarningLink>
-              )}
+              <Link href={startReadingHref}>
+                Start Reading
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
 
             <Button variant="outline" asChild size="lg">

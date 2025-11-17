@@ -28,11 +28,19 @@ Password: pass4jane
 Reader Login:
 Email: reader22@example.com
 Password: password123
+
+Admin Login:
+Email: admin@novelnest.dev
+Password: Admin1234!
+
+SuperAdmin Login:
+Email: superadmin@novelnest.dev
+Password: Super1234!
 ```
 
 ## What Gets Seeded
 
-✅ 7 users (5 authors + 2 readers)  
+✅ 8 users (demo accounts covering reader, writer, admin, developer, superadmin)  
 ✅ 5 novels (Pride & Prejudice, Dune, The Hobbit, Mockingbird, 1984)  
 ✅ 10 episodes/chapters  
 ✅ 10 reviews  

@@ -1,0 +1,13 @@
+-- Align legacy `episodes` table with moderation workflow columns
+-- Run with: mysql -u <user> -p<password> novel_nest < scripts/006_align_episode_status.sql
+
+ALTER TABLE `episodes`
+  ADD COLUMN IF NOT EXISTS `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL' AFTER `content`,
+  ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `release_date`;
+
+ALTER TABLE `episodes`
+  MODIFY COLUMN `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  MODIFY COLUMN `release_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  MODIFY COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+UPDATE `episodes` SET `status` = 'APPROVED' WHERE `status` IS NULL;

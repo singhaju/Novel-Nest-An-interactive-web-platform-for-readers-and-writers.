@@ -66,6 +66,18 @@ Visit: **http://localhost:3000**
 5. **Add to Wishlist:** Test wishlist functionality
 6. **Follow Authors:** Test the follow system
 
+### Advanced SQL Features
+
+- [ ] Run `POST /api/admin/db-features` as a SuperAdmin or Developer to install the MySQL stored procedure and rating triggers.
+- [ ] Verify stored procedure exists:
+  ```sql
+  SHOW PROCEDURE STATUS WHERE Db = DATABASE() AND Name = 'UpdateReadingProgress';
+  ```
+- [ ] Verify triggers exist:
+  ```sql
+  SHOW TRIGGERS LIKE 'reviews';
+  ```
+
 ---
 
 ## Database Query Examples

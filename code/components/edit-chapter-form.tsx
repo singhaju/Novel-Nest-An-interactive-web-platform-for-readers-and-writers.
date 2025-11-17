@@ -113,16 +113,20 @@ export function EditChapterForm({
         />
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        Saving changes resubmits this episode for review. It will remain hidden until an admin approves it again.
+      </p>
+
       {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
       <div className="flex flex-wrap gap-4">
-        <Button type="button" variant="outline" className="flex-1 min-w-[120px] rounded-2xl" onClick={() => router.back()}>
+        <Button type="button" variant="outline" className="flex-1 min-w-32 rounded-2xl" onClick={() => router.back()}>
           Cancel
         </Button>
-        <Button type="button" variant="destructive" className="flex-1 min-w-[120px] rounded-2xl" onClick={handleDelete} disabled={loading}>
+        <Button type="button" variant="destructive" className="flex-1 min-w-32 rounded-2xl" onClick={handleDelete} disabled={loading}>
           Delete Episode
         </Button>
-        <Button type="submit" disabled={loading} className="flex-1 min-w-[160px] rounded-2xl">
+        <Button type="submit" disabled={loading} className="flex-1 min-w-40 rounded-2xl">
           {loading ? "Saving..." : "Save Changes"}
         </Button>
       </div>

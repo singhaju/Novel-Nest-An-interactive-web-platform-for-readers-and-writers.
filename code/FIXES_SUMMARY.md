@@ -1,3 +1,27 @@
+# Fixes Applied - November 16, 2025
+
+## Highlights
+
+- Expanded the advanced SQL installer so it now provisions:
+   - `log_user_deletions` trigger plus a `deleted_users_log` audit table.
+   - Stored procedures for wishlist (`AddToWishlist`/`RemoveFromWishlist`) and follows (`FollowAuthor`/`UnfollowAuthor`).
+   - A `GetTrendingNovels` procedure that ranks titles by views, likes, and recent reviews.
+- `app/api/wishlist/route.ts` and `app/api/follows/route.ts` now delegate their mutations to the new stored procedures to satisfy the rubric’s database-integration requirement.
+- Introduced `GET /api/novels/trending` which calls the `GetTrendingNovels` procedure; home and browse pages use it for the trending rails.
+- Seeding script mirrors the updated installer so local environments pick up the new trigger, audit log, and procedures automatically.
+- Added `/api/profile` PATCH endpoint and `BioForm` component so readers can update their bio from the profile page with a prominent call-to-action.
+
+# Fixes Applied - November 15, 2025
+
+## Highlights
+
+- Added a **SuperAdmin** role to the Prisma schema and updated auth/session typing across the app.
+- Hardened access control with middleware role checks and UI updates so privileged menus match backend rules.
+- Seed script now provisions demo accounts for every role, including `superadmin@novelnest.dev`.
+- Introduced a MySQL stored procedure (`UpdateReadingProgress`) and review rating triggers with an installer endpoint at `/api/admin/db-features`.
+- Reading-progress API now delegates to the stored procedure to satisfy the advanced SQL rubric item.
+- Added full CRUD coverage for episodes with PATCH/DELETE handlers (`app/api/episodes/[id]/route.ts`) and matching client helpers.
+
 # Fixes Applied - November 11, 2025
 
 ## Issues Resolved

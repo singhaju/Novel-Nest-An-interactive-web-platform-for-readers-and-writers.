@@ -1,18 +1,24 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PASSWORD_REQUIREMENTS, evaluatePassword, isPasswordStrong } from "@/lib/password-policy"
+import { CheckCircle2, Circle } from "lucide-react"
 
 export default function SignupPage() {
-  const [isLogin, setIsLogin] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<"reader" | "writer">("reader")
+  const [passwordValue, setPasswordValue] = useState("")
   const router = useRouter()
+
+  const passwordChecks = useMemo(() => evaluatePassword(passwordValue), [passwordValue])
+  const passwordMeetsAll = useMemo(() => Object.values(passwordChecks).every(Boolean), [passwordChecks])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -24,6 +30,7 @@ export default function SignupPage() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const confirmPassword = formData.get("confirmPassword") as string
+    const role = (formData.get("role") as string) ?? selectedRole
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
@@ -31,11 +38,23 @@ export default function SignupPage() {
       return
     }
 
+    if (!isPasswordStrong(password)) {
+      const checks = evaluatePassword(password)
+      const unmet = PASSWORD_REQUIREMENTS.filter((requirement) => !checks[requirement.key]).map(
+        (requirement) => requirement.label.toLowerCase(),
+      )
+      setError(`Password must include: ${unmet.join(", ")}`)
+      setLoading(false)
+      return
+    }
+
+    const normalizedRole = role === "writer" ? "WRITER" : "READER"
+
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, role: normalizedRole }),
       })
 
       const data = await response.json()
@@ -66,104 +85,150 @@ export default function SignupPage() {
           {/* Tab Buttons */}
           <div className="mb-6 flex rounded-2xl bg-muted p-2">
             <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 rounded-xl px-6 py-3 text-center font-medium transition-colors ${
-                isLogin ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
+              type="button"
+              onClick={() => router.push("/auth/login")}
+              className="flex-1 rounded-xl px-6 py-3 text-center font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Login
             </button>
             <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 rounded-xl px-6 py-3 text-center font-medium transition-colors ${
-                !isLogin ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
+              type="button"
+              className="flex-1 rounded-xl bg-background px-6 py-3 text-center font-medium text-foreground shadow-sm"
+              aria-current="page"
             >
               Signup
             </button>
           </div>
 
-          {/* Signup Form */}
-          {!isLogin ? (
-            <div className="rounded-3xl bg-muted p-8">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
-                <p className="text-muted-foreground">Sign up to start your reading journey</p>
+          <div className="rounded-3xl bg-muted p-8">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
+              <p className="text-muted-foreground">Sign up to start your reading journey</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-foreground font-medium">
+                  Username
+                </Label>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  required
+                  className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
+                />
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-foreground font-medium">
-                    Username
-                  </Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    required
-                    className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-foreground font-medium">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your Email"
+                  required
+                  className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-foreground font-medium">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  required
+                  value={passwordValue}
+                  onChange={(event) => setPasswordValue(event.target.value)}
+                  className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
+                />
+                <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm">
+                  <p className="mb-2 font-semibold text-foreground">Password must include:</p>
+                  <ul className="space-y-2">
+                    {PASSWORD_REQUIREMENTS.map((requirement) => {
+                      const met = passwordChecks[requirement.key]
+                      return (
+                        <li key={requirement.key} className="flex items-center gap-2 text-sm">
+                          {met ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          )}
+                          <span className={met ? "text-foreground" : "text-muted-foreground"}>{requirement.label}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {!passwordMeetsAll && passwordValue.length > 0 && (
+                    <p className="mt-3 text-xs text-amber-600">Your password still needs to meet all requirements above.</p>
+                  )}
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground font-medium">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your Email"
-                    required
-                    className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-foreground font-medium">
+                  Confirm Password
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  required
+                  className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-foreground font-medium">Choose your role</Label>
+                <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Select account role">
+                  {["reader", "writer"].map((roleOption) => {
+                    const isActive = selectedRole === roleOption
+                    const label = roleOption === "reader" ? "Reader" : "Writer"
+                    const description =
+                      roleOption === "reader" ? "Discover and follow novels" : "Publish your own stories"
+                    return (
+                      <button
+                        key={roleOption}
+                        type="button"
+                        onClick={() => setSelectedRole(roleOption as "reader" | "writer")}
+                        role="radio"
+                        aria-checked={isActive}
+                        className={`rounded-2xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                          isActive
+                            ? "border-transparent bg-foreground text-background shadow-lg ring-offset-background"
+                            : "border-border bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{label}</div>
+                        <div className={`text-xs ${isActive ? "text-background/80" : "text-muted-foreground"}`}>
+                          {description}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
+                <input type="hidden" name="role" value={selectedRole} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground font-medium">
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    required
-                    className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
-                  />
-                </div>
+              {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-foreground font-medium">
-                    Confirm Password
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    required
-                    className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
-                  />
-                </div>
-
-                {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-2xl bg-foreground py-6 text-background hover:bg-foreground/90"
-                >
-                  {loading ? "Creating account..." : "Signup"}
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <Link href="/auth/login">
-              <Button className="w-full">Go to Login</Button>
-            </Link>
-          )}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-2xl bg-foreground py-6 text-background hover:bg-foreground/90"
+              >
+                {loading ? "Creating account..." : "Signup"}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

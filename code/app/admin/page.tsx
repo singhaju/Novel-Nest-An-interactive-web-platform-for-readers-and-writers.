@@ -1,31 +1,49 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { auth } from "@/lib/auth" // ✅ use the new `auth()` helper
-import { redirect } from "next/navigation"
+import { PrivilegedInviteForm } from "@/components/privileged-invite-form"
+import { SuperadminUserManagementTable } from "@/components/superadmin-user-management-table"
+import { auth } from "@/lib/auth"
+import { getEpisodeReviewCounts, getNovelCounts, getUserCount } from "@/lib/repositories/stats"
+import { listUsers } from "@/lib/repositories/users"
+import { cn } from "@/lib/utils"
+import { Users, BookOpen, AlertCircle, NotebookPen } from "lucide-react"
 import Link from "next/link"
-import { Users, BookOpen, AlertCircle } from "lucide-react"
+import { redirect } from "next/navigation"
 
 export default async function AdminDashboardPage() {
-  // ✅ 1. Protect admin page using new helper
   const session = await auth()
 
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
-  if (!session || role !== "admin") {
+  if (!session || !["admin", "superadmin"].includes(role)) {
     redirect("/")
   }
 
-  // ✅ 2. Set base URL
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+  const [userCount, novelCounts, episodeCounts, managedUsers] = await Promise.all([
+    getUserCount(),
+    getNovelCounts(),
+    getEpisodeReviewCounts(),
+    role === "superadmin" ? listUsers(500) : Promise.resolve([]),
+  ])
 
-  // ✅ 3. Fetch user stats
-  const usersRes = await fetch(`${baseUrl}/api/users/stats`, { cache: "no-store" })
-  const usersData = usersRes.ok ? await usersRes.json() : { total: 0 }
+  const totalUsers = userCount
+  const totalNovels = novelCounts.total
+  const pendingNovels = novelCounts.pending
+  const pendingEpisodes = episodeCounts.pending
 
-  // ✅ 4. Fetch novel stats
-  const novelsRes = await fetch(`${baseUrl}/api/novels/stats`, { cache: "no-store" })
-  const novelsData = novelsRes.ok ? await novelsRes.json() : { total: 0, pending: 0 }
+  const hasPending = pendingNovels > 0
+  const hasPendingEpisodes = pendingEpisodes > 0
+  const userManagementHref = role === "superadmin" ? "/admin#user-management" : "/admin/users"
 
-  // ✅ 5. Page UI
+  const managedUsersForClient = role === "superadmin"
+    ? managedUsers.map((profile) => ({
+        id: profile.user_id,
+        username: profile.username ?? null,
+        role: profile.role.toLowerCase(),
+        joinedAt: profile.created_at.toISOString(),
+        isBanned: Boolean(profile.is_banned),
+      }))
+    : []
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -34,14 +52,14 @@ export default async function AdminDashboardPage() {
         <h1 className="text-3xl font-bold text-foreground mb-8">Admin Dashboard</h1>
 
         {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-3 mb-12">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
           {/* Total Users */}
           <div className="rounded-3xl border-2 border-border bg-card p-8">
             <div className="flex items-center gap-3 mb-3">
               <Users className="h-6 w-6 text-muted-foreground" />
               <h3 className="text-lg font-medium text-muted-foreground">Total Users</h3>
             </div>
-            <p className="text-5xl font-bold">{usersData.total?.toLocaleString() || 0}</p>
+            <p className="text-5xl font-bold">{totalUsers.toLocaleString()}</p>
           </div>
 
           {/* Total Novels */}
@@ -50,24 +68,49 @@ export default async function AdminDashboardPage() {
               <BookOpen className="h-6 w-6 text-muted-foreground" />
               <h3 className="text-lg font-medium text-muted-foreground">Total Novels</h3>
             </div>
-            <p className="text-5xl font-bold">{novelsData.total?.toLocaleString() || 0}</p>
+            <p className="text-5xl font-bold">{totalNovels.toLocaleString()}</p>
           </div>
 
-          {/* Pending Reviews */}
-          <div className="rounded-3xl border-2 border-border bg-card p-8">
-            <div className="flex items-center gap-3 mb-3">
-              <AlertCircle className="h-6 w-6 text-muted-foreground" />
-              <h3 className="text-lg font-medium text-muted-foreground">Pending Reviews</h3>
+          {/* Pending Novels */}
+          <Link href="/admin/novels/pending" className="block">
+            <div
+              className={cn(
+                "rounded-3xl border-2 border-border bg-card p-8 transition-colors",
+                hasPending && "border-rose-400/60 bg-rose-50",
+              )}
+            >
+              <div className="mb-3 flex items-center gap-3">
+                <AlertCircle className={cn("h-6 w-6", hasPending ? "text-rose-600" : "text-muted-foreground")} />
+                <h3 className="text-lg font-medium text-muted-foreground">Pending Novels</h3>
+              </div>
+              <p className="text-5xl font-bold">{pendingNovels}</p>
+              {hasPending && <p className="mt-2 text-sm text-rose-700">Action required</p>}
             </div>
-            <p className="text-5xl font-bold">{novelsData.pending || 0}</p>
-          </div>
+          </Link>
+
+          {/* Pending Episodes */}
+          <Link href="/admin/episodes/pending" className="block">
+            <div
+              className={cn(
+                "rounded-3xl border-2 border-border bg-card p-8 transition-colors",
+                hasPendingEpisodes && "border-amber-500/60 bg-amber-50",
+              )}
+            >
+              <div className="mb-3 flex items-center gap-3">
+                <NotebookPen className={cn("h-6 w-6", hasPendingEpisodes ? "text-amber-600" : "text-muted-foreground")} />
+                <h3 className="text-lg font-medium text-muted-foreground">Pending Episodes</h3>
+              </div>
+              <p className="text-5xl font-bold">{pendingEpisodes}</p>
+              {hasPendingEpisodes && <p className="mt-2 text-sm text-amber-700">Awaiting review</p>}
+            </div>
+          </Link>
         </div>
 
         {/* Quick Actions */}
         <section>
           <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Link href="/admin/users">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Link href={userManagementHref}>
               <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
                 User Management
               </Button>
@@ -77,13 +120,45 @@ export default async function AdminDashboardPage() {
                 Novel Management
               </Button>
             </Link>
-            <Link href="/admin/reports">
-              <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
-                Reports
-              </Button>
-            </Link>
           </div>
         </section>
+
+        {role === "superadmin" && (
+          <section id="user-management" className="mt-12 space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">User Management</h2>
+              <p className="text-sm text-muted-foreground">
+                Provision new accounts and review platform roles without leaving the dashboard.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border-2 border-border bg-card p-6">
+              <PrivilegedInviteForm
+                allowedRoles={["reader", "writer", "admin", "developer", "superadmin"]}
+                title="Create a new account"
+                description="Super Admins can provision any role, including fellow Super Admins."
+              />
+            </div>
+
+            <div className="rounded-3xl border-2 border-border bg-card p-6">
+              <SuperadminUserManagementTable users={managedUsersForClient} />
+            </div>
+          </section>
+        )}
+
+        {["admin", "superadmin"].includes(role) && (
+          <section className="mt-12 rounded-3xl border-2 border-border bg-card p-6">
+            <h3 className="mb-2 text-lg font-semibold text-foreground">Invite an admin</h3>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Share access with trusted staff by creating a dedicated admin account. Admins can review submissions, manage users, and triage incidents.
+            </p>
+            <PrivilegedInviteForm
+              allowedRoles={["admin"]}
+              title="Create admin account"
+              description="Fill out the details below to invite a new administrator."
+            />
+          </section>
+        )}
       </main>
     </div>
   )

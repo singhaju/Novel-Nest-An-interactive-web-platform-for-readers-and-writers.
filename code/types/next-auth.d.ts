@@ -6,7 +6,7 @@ declare module "next-auth" {
       id: number
       username: string
       email: string
-      role: "Reader" | "Writer" | "Admin" | "Developer"
+  role: "reader" | "writer" | "admin" | "developer" | "superadmin"
       profile_picture?: string | null
       bio?: string | null
     } & DefaultSession["user"]
@@ -16,7 +16,7 @@ declare module "next-auth" {
     id: number
     username: string
     email: string
-    role: "Reader" | "Writer" | "Admin" | "Developer"
+  role: "reader" | "writer" | "admin" | "developer" | "superadmin"
     profile_picture?: string | null
     bio?: string | null
   }
@@ -25,6 +25,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: number
-    role: "Reader" | "Writer" | "Admin" | "Developer"
+  role: "reader" | "writer" | "admin" | "developer" | "superadmin"
   }
 }

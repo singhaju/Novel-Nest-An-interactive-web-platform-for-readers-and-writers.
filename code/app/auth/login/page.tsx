@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -22,12 +21,18 @@ export default function LoginPage() {
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
+    const identifier = (formData.get("identifier") as string)?.trim() || ""
     const password = formData.get("password") as string
+
+    if (!identifier) {
+      setError("Email or username is required")
+      setLoading(false)
+      return
+    }
 
     try {
       const result = await signIn("credentials", {
-        email,
+        identifier,
         password,
         redirect: false,
       })
@@ -59,81 +64,72 @@ export default function LoginPage() {
           {/* Tab Buttons */}
           <div className="mb-6 flex rounded-2xl bg-muted p-2">
             <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 rounded-xl px-6 py-3 text-center font-medium transition-colors ${
-                isLogin ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
+              type="button"
+              className="flex-1 rounded-xl bg-background px-6 py-3 text-center font-medium text-foreground shadow-sm"
+              aria-current="page"
             >
               Login
             </button>
             <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 rounded-xl px-6 py-3 text-center font-medium transition-colors ${
-                !isLogin ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
+              type="button"
+              onClick={() => router.push("/auth/signup")}
+              className="flex-1 rounded-xl px-6 py-3 text-center font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Signup
             </button>
           </div>
 
-          {/* Login Form */}
-          {isLogin ? (
-            <div className="rounded-3xl bg-muted p-8">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold text-foreground">Welcome Back!</h1>
-                <p className="text-muted-foreground">Login to Continue reading your novels</p>
+          <div className="rounded-3xl bg-muted p-8">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-foreground">Welcome Back!</h1>
+              <p className="text-muted-foreground">Login to Continue reading your novels</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="identifier" className="text-foreground font-medium">
+                  Email or Username
+                </Label>
+                <Input
+                  id="identifier"
+                  name="identifier"
+                  type="text"
+                  placeholder="Enter your email or username"
+                  required
+                  className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
+                />
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground font-medium">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    required
-                    className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-foreground font-medium">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  required
+                  className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
+                />
+                <div className="text-right">
+                  <Link href="/auth/forgot-password" className="text-sm text-muted-foreground hover:text-foreground">
+                    Forgot Your Password?
+                  </Link>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground font-medium">
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    required
-                    className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
-                  />
-                  <div className="text-right">
-                    <Link href="/auth/forgot-password" className="text-sm text-muted-foreground hover:text-foreground">
-                      Forgot Your Password?
-                    </Link>
-                  </div>
-                </div>
+              {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
-                {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-2xl bg-foreground py-6 text-background hover:bg-foreground/90"
-                >
-                  {loading ? "Logging in..." : "Login"}
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <Link href="/auth/signup">
-              <Button className="w-full">Go to Signup</Button>
-            </Link>
-          )}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-2xl bg-foreground py-6 text-background hover:bg-foreground/90"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

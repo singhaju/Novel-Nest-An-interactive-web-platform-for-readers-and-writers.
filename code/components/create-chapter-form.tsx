@@ -76,6 +76,11 @@ export function CreateChapterForm({ novelId, chapterNumber }: CreateChapterFormP
         />
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        Every new episode is reviewed by an admin. While it is pending approval, the episode and its novel will show as
+        “In review”.
+      </p>
+
       {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
       <div className="flex gap-4">

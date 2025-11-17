@@ -16,7 +16,7 @@
 --   `password` VARCHAR(255) NOT NULL,
 --   `profile_picture` VARCHAR(255),
 --   `bio` TEXT,
---   `role` ENUM('READER', 'WRITER', 'ADMIN', 'DEVELOPER') NOT NULL DEFAULT 'READER',
+--   `role` ENUM('READER', 'WRITER', 'ADMIN', 'DEVELOPER', 'SUPERADMIN') NOT NULL DEFAULT 'READER',
 --   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 -- );
 
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `novels` (
   `description` TEXT,
   `cover_image` VARCHAR(255),
   `tags` TEXT,
-  `status` ENUM('ONGOING', 'COMPLETED', 'HIATUS', 'PENDING_APPROVAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  `status` ENUM('ONGOING', 'COMPLETED', 'HIATUS', 'PENDING_APPROVAL', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
   `last_update` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `views` INT DEFAULT 0,
   `likes` INT DEFAULT 0,
@@ -37,14 +37,35 @@ CREATE TABLE IF NOT EXISTS `novels` (
   FOREIGN KEY (`author_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL
 );
 
--- Harmonise table definitions with Prisma schema when tables already exist
+-- Harmonise table definitions with DATABASE_SCHEMA_REFERENCE.md when tables already exist
 ALTER TABLE `users`
   MODIFY COLUMN `role` VARCHAR(32) DEFAULT 'READER';
 
 UPDATE `users` SET `role` = UPPER(`role`);
 
 ALTER TABLE `users`
-  MODIFY COLUMN `role` ENUM('READER', 'WRITER', 'ADMIN', 'DEVELOPER') NOT NULL DEFAULT 'READER';
+  MODIFY COLUMN `role` ENUM('READER', 'WRITER', 'ADMIN', 'DEVELOPER', 'SUPERADMIN') NOT NULL DEFAULT 'READER';
+
+SET @has_is_banned := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'users'
+    AND COLUMN_NAME = 'is_banned'
+);
+
+SET @maybe_add_is_banned := IF(
+  @has_is_banned = 0,
+  'ALTER TABLE `users` ADD COLUMN `is_banned` TINYINT(1) NOT NULL DEFAULT 0 AFTER `role`;',
+  'SELECT 1;'
+);
+
+PREPARE add_is_banned_stmt FROM @maybe_add_is_banned;
+EXECUTE add_is_banned_stmt;
+DEALLOCATE PREPARE add_is_banned_stmt;
+
+UPDATE `users`
+SET `is_banned` = COALESCE(`is_banned`, 0);
 
 ALTER TABLE `novels`
   MODIFY COLUMN `tags` TEXT NULL,
@@ -53,7 +74,7 @@ ALTER TABLE `novels`
 UPDATE `novels` SET `status` = UPPER(REPLACE(`status`, ' ', '_'));
 
 ALTER TABLE `novels`
-  MODIFY COLUMN `status` ENUM('ONGOING', 'COMPLETED', 'HIATUS', 'PENDING_APPROVAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  MODIFY COLUMN `status` ENUM('ONGOING', 'COMPLETED', 'HIATUS', 'PENDING_APPROVAL', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
   MODIFY COLUMN `last_update` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   MODIFY COLUMN `rating` DECIMAL(3, 2) DEFAULT 0;
 
@@ -63,11 +84,21 @@ CREATE TABLE IF NOT EXISTS `episodes` (
   `novel_id` INT NOT NULL,
   `title` VARCHAR(255) NOT NULL,
   `content` TEXT,
+  `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') DEFAULT 'PENDING_APPROVAL',
   `is_locked` BOOLEAN DEFAULT 0,
   `price` INT,
-  `release_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `release_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`novel_id`) REFERENCES `novels`(`novel_id`) ON DELETE CASCADE
 );
+
+ALTER TABLE `episodes`
+  MODIFY COLUMN `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  MODIFY COLUMN `release_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  MODIFY COLUMN `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+UPDATE `episodes`
+SET `status` = COALESCE(`status`, 'PENDING_APPROVAL');
 
 -- Review table
 CREATE TABLE IF NOT EXISTS `reviews` (
@@ -159,34 +190,44 @@ ON DUPLICATE KEY UPDATE user_id = user_id;
 
 INSERT INTO `novels` (`novel_id`, `title`, `description`, `cover_image`, `tags`, `status`, `last_update`, `views`, `likes`, `rating`, `author_id`) 
 VALUES
-(2001, 'Pride and Prejudice', 'A classic romance novel that follows the spirited Elizabeth Bennet as she navigates love, family, and social expectations in Regency-era England.', 'https://drive.google.com/uc?id=pride_prejudice_cover_id', '["romance", "classic", "regency"]', 'COMPLETED', NOW(), 150230, 12500, 4.95, 101),
-(2002, 'Dune', 'Set in the distant future, this sci-fi epic follows Paul Atreides as he becomes embroiled in the politics of the desert planet Arrakis and the struggle for the precious spice melange.', 'https://drive.google.com/uc?id=dune_cover_id', '["sci-fi", "epic", "fantasy"]', 'COMPLETED', NOW(), 210500, 18200, 4.98, 102),
-(2003, 'The Hobbit', 'The adventure of hobbit Bilbo Baggins, who is swept into an epic quest to reclaim treasure guarded by a dragon in Middle-earth.', 'https://drive.google.com/uc?id=hobbit_cover_id', '["fantasy", "adventure", "classic"]', 'COMPLETED', NOW(), 320000, 25000, 4.99, 103),
-(2004, 'To Kill a Mockingbird', 'Told through the eyes of Scout Finch, this novel explores the irrationality of adult attitudes towards race and class in the American South.', 'https://drive.google.com/uc?id=mockingbird_cover_id', '["classic", "fiction", "southern-gothic"]', 'COMPLETED', NOW(), 180450, 15300, 4.96, 104),
-(2005, 'Nineteen Eighty-Four', 'A chilling dystopian novel set in Airstrip One, where the totalitarian Party controls every aspect of human existence through surveillance and propaganda.', 'https://drive.google.com/uc?id=1984_cover_id', '["dystopian", "sci-fi", "classic"]', 'COMPLETED', NOW(), 255000, 21000, 4.97, 105)
-ON DUPLICATE KEY UPDATE novel_id = novel_id;
+(2001, 'Pride and Prejudice', 'A classic romance novel that follows the spirited Elizabeth Bennet as she navigates love, family, and social expectations in Regency-era England.', 'https://drive.google.com/file/d/12yQBQA_7UqR4NBeQuYw2Vx11-SVxwSPB/view?usp=drive_link', '["romance", "classic", "regency"]', 'COMPLETED', NOW(), 150230, 12500, 4.95, 101),
+(2002, 'Dune', 'Set in the distant future, this sci-fi epic follows Paul Atreides as he becomes embroiled in the politics of the desert planet Arrakis and the struggle for the precious spice melange.', 'https://drive.google.com/file/d/1T3QsfYV8-kuvUpAKxFMXu3BvQNd4mVD6/view?usp=sharing', '["sci-fi", "epic", "fantasy"]', 'COMPLETED', NOW(), 210500, 18200, 4.98, 102),
+(2003, 'The Hobbit', 'The adventure of hobbit Bilbo Baggins, who is swept into an epic quest to reclaim treasure guarded by a dragon in Middle-earth.', 'https://drive.google.com/file/d/1g2fjK-t7-hcGQpvgkN9kj6lWfK9WvQ8W/view?usp=drive_link', '["fantasy", "adventure", "classic"]', 'COMPLETED', NOW(), 320000, 25000, 4.99, 103),
+(2004, 'To Kill a Mockingbird', 'Told through the eyes of Scout Finch, this novel explores the irrationality of adult attitudes towards race and class in the American South.', 'https://drive.google.com/file/d/1jJv9S3jY1OHtOghyO7YYLrTWFkWaetTJ/view?usp=drive_link', '["classic", "fiction", "southern-gothic"]', 'COMPLETED', NOW(), 180450, 15300, 4.96, 104),
+(2005, 'Nineteen Eighty-Four', 'A chilling dystopian novel set in Airstrip One, where the totalitarian Party controls every aspect of human existence through surveillance and propaganda.', 'https://drive.google.com/file/d/1W66cUGJ2y6P2m5BKBDPhKrMFBL1IMn7Y/view?usp=drive_link', '["dystopian", "sci-fi", "classic"]', 'COMPLETED', NOW(), 255000, 21000, 4.97, 105)
+ON DUPLICATE KEY UPDATE
+  title = VALUES(title),
+  description = VALUES(description),
+  cover_image = VALUES(cover_image),
+  tags = VALUES(tags),
+  status = VALUES(status),
+  last_update = VALUES(last_update),
+  views = VALUES(views),
+  likes = VALUES(likes),
+  rating = VALUES(rating),
+  author_id = VALUES(author_id);
 
 -- ============================================================================
 -- 4. INSERT EPISODES (Chapters)
 -- ============================================================================
 
 -- Pride and Prejudice Episodes
-INSERT INTO `episodes` (`episode_id`, `novel_id`, `title`, `content`, `release_date`) 
+INSERT INTO `episodes` (`episode_id`, `novel_id`, `title`, `content`, `status`, `release_date`) 
 VALUES
-(3001, 2001, 'Chapter 1: First Impressions', 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.', '2025-09-01 10:00:00'),
-(3002, 2001, 'Chapter 2: The Bennet Family', 'Mr. and Mrs. Bennet had five daughters; and Mr. Bennet, who was fond of having witty dialogue, was amazed at his wife\'s talk of establishing them all. His wife was a woman of mean understanding, little information, and uncertain temper.', '2025-09-02 10:00:00'),
+(3001, 2001, 'Chapter 1: First Impressions', 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.', 'APPROVED', '2025-09-01 10:00:00'),
+(3002, 2001, 'Chapter 2: The Bennet Family', 'Mr. and Mrs. Bennet had five daughters; and Mr. Bennet, who was fond of having witty dialogue, was amazed at his wife\'s talk of establishing them all. His wife was a woman of mean understanding, little information, and uncertain temper.', 'APPROVED', '2025-09-02 10:00:00'),
 -- Dune Episodes
-(3003, 2002, 'Book One: Dune - Chapter 1', 'In the week before their departure to Arrakis, when all the final scurrying about had reached a nearly unbearable frenzy, an old woman came to visit the mother of the boy, Paul Atreides. Gaius Helen Mohiam, the Emperor\'s own Shadow, arrived at the Arrakis heighliner dock.', '2025-09-01 10:00:00'),
-(3004, 2002, 'Book One: Dune - Chapter 2', 'The spice must flow. This was the fundamental principle that had shaped the history of Arrakis. Paul understood this now, felt the weight of it pressing down upon him as he stood in the palace, watching the sandworm-killed landscape stretch endlessly toward the horizon.', '2025-09-02 10:00:00'),
+(3003, 2002, 'Book One: Dune - Chapter 1', 'In the week before their departure to Arrakis, when all the final scurrying about had reached a nearly unbearable frenzy, an old woman came to visit the mother of the boy, Paul Atreides. Gaius Helen Mohiam, the Emperor\'s own Shadow, arrived at the Arrakis heighliner dock.', 'APPROVED', '2025-09-01 10:00:00'),
+(3004, 2002, 'Book One: Dune - Chapter 2', 'The spice must flow. This was the fundamental principle that had shaped the history of Arrakis. Paul understood this now, felt the weight of it pressing down upon him as he stood in the palace, watching the sandworm-killed landscape stretch endlessly toward the horizon.', 'APPROVED', '2025-09-02 10:00:00'),
 -- The Hobbit Episodes
-(3005, 2003, 'Chapter 1: An Unexpected Party', 'In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and oozy smells, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.', '2025-09-01 10:00:00'),
-(3006, 2003, 'Chapter 2: Roast Mutton', 'When Bilbo woke, the sun was already shining through the window, and he realized that he had slept much later than intended. The dwarves were no longer sitting at the table; their breakfast was finished, and they were making ready to depart on their great adventure.', '2025-09-02 10:00:00'),
+(3005, 2003, 'Chapter 1: An Unexpected Party', 'In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and oozy smells, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.', 'APPROVED', '2025-09-01 10:00:00'),
+(3006, 2003, 'Chapter 2: Roast Mutton', 'When Bilbo woke, the sun was already shining through the window, and he realized that he had slept much later than intended. The dwarves were no longer sitting at the table; their breakfast was finished, and they were making ready to depart on their great adventure.', 'APPROVED', '2025-09-02 10:00:00'),
 -- To Kill a Mockingbird Episodes
-(3007, 2004, 'Part One, Chapter 1', 'When he was nearly thirteen, my brother Jem got his arm badly broken at the elbow. When it healed, and Jem\'s fears of never being able to play football were assuaged, he was seldom self-conscious about his injury.', '2025-09-01 10:00:00'),
-(3008, 2004, 'Part One, Chapter 2', 'Maycomb was an old town, but it was a tired old town when I first knew it. In rainy weather the streets turned to red slop; grass grew on the sidewalks, the courthouse sagged in the square. Somehow, it was hotter then; a black dog suffered on a summer\'s day.', '2025-09-02 10:00:00'),
+(3007, 2004, 'Part One, Chapter 1', 'When he was nearly thirteen, my brother Jem got his arm badly broken at the elbow. When it healed, and Jem\'s fears of never being able to play football were assuaged, he was seldom self-conscious about his injury.', 'APPROVED', '2025-09-01 10:00:00'),
+(3008, 2004, 'Part One, Chapter 2', 'Maycomb was an old town, but it was a tired old town when I first knew it. In rainy weather the streets turned to red slop; grass grew on the sidewalks, the courthouse sagged in the square. Somehow, it was hotter then; a black dog suffered on a summer\'s day.', 'APPROVED', '2025-09-02 10:00:00'),
 -- Nineteen Eighty-Four Episodes
-(3009, 2005, 'Part One, Chapter 1', 'It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.', '2025-09-01 10:00:00'),
-(3010, 2005, 'Part One, Chapter 2', 'The Party told you to reject the evidence of your eyes and ears. It was their final, most essential command. His heart sank as he thought of the endless war, the terrible crushing weight of the Party\'s power, and the inexorable march toward 1984.', '2025-09-02 10:00:00')
+(3009, 2005, 'Part One, Chapter 1', 'It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.', 'APPROVED', '2025-09-01 10:00:00'),
+(3010, 2005, 'Part One, Chapter 2', 'The Party told you to reject the evidence of your eyes and ears. It was their final, most essential command. His heart sank as he thought of the endless war, the terrible crushing weight of the Party\'s power, and the inexorable march toward 1984.', 'APPROVED', '2025-09-02 10:00:00')
 ON DUPLICATE KEY UPDATE episode_id = episode_id;
 
 -- ============================================================================
