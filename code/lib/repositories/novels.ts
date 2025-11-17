@@ -29,6 +29,7 @@ export interface NovelWithAuthorRow extends NovelRow {
 export interface EpisodeSummaryRow extends RowDataPacket {
   episode_id: number
   title: string
+  status: string
   release_date: Date
 }
 
@@ -244,7 +245,7 @@ export async function getNovelDetail(novelId: number): Promise<NovelDetailResult
   }
 
   const episodes = await query<EpisodeSummaryRow[]>(
-    `SELECT episode_id, title, release_date FROM episodes WHERE novel_id = ? ORDER BY episode_id ASC`,
+    `SELECT episode_id, title, status, release_date FROM episodes WHERE novel_id = ? ORDER BY episode_id ASC`,
     [novelId],
   )
 
@@ -410,7 +411,7 @@ export async function getNovelSubmissionDetail(novelId: number): Promise<NovelSu
   }
 
   const episodes = await query<EpisodeDetailRow[]>(
-    `SELECT episode_id, title, release_date, content
+    `SELECT episode_id, title, status, release_date, content
      FROM episodes
      WHERE novel_id = ?
      ORDER BY episode_id ASC`,

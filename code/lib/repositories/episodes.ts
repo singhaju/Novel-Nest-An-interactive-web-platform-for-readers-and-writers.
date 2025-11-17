@@ -7,7 +7,9 @@ export interface EpisodeRow extends RowDataPacket {
   novel_id: number
   title: string
   content: string | null
+  status: string
   release_date: Date
+  updated_at: Date
 }
 
 export interface EpisodeWithNovelRow extends EpisodeRow {
@@ -19,7 +21,9 @@ export interface EpisodeWithNovelInfo extends RowDataPacket {
   episode_id: number
   title: string
   content: string | null
+  status: string
   release_date: Date
+  updated_at: Date
   novel_id: number
   novel_title: string
   author_username: string | null
@@ -27,7 +31,7 @@ export interface EpisodeWithNovelInfo extends RowDataPacket {
 
 export async function listEpisodesByNovel(novelId: number): Promise<EpisodeRow[]> {
   return query<EpisodeRow[]>(
-    `SELECT episode_id, novel_id, title, release_date
+    `SELECT episode_id, novel_id, title, status, release_date
      FROM episodes
      WHERE novel_id = ?
      ORDER BY episode_id ASC`,
@@ -35,16 +39,21 @@ export async function listEpisodesByNovel(novelId: number): Promise<EpisodeRow[]
   )
 }
 
-export async function createEpisode(data: { novel_id: number; title: string; content: string | null }): Promise<EpisodeRow> {
+export async function createEpisode(data: {
+  novel_id: number
+  title: string
+  content: string | null
+  status?: string
+}): Promise<EpisodeRow> {
   const result = await execute(
-    `INSERT INTO episodes (novel_id, title, content)
-     VALUES (?, ?, ?)` ,
-    [data.novel_id, data.title, data.content ?? null],
+    `INSERT INTO episodes (novel_id, title, content, status)
+     VALUES (?, ?, ?, ?)` ,
+    [data.novel_id, data.title, data.content ?? null, (data.status ?? "PENDING_APPROVAL").toUpperCase()],
   )
 
   const episodeId = Number(result.insertId)
   const created = await queryOne<EpisodeRow>(
-    `SELECT episode_id, novel_id, title, content, release_date
+    `SELECT episode_id, novel_id, title, content, status, release_date, updated_at
      FROM episodes WHERE episode_id = ?`,
     [episodeId],
   )
@@ -68,7 +77,7 @@ export async function findEpisodeWithNovel(episodeId: number): Promise<EpisodeWi
 
 export async function findEpisodeWithDetails(episodeId: number): Promise<EpisodeWithNovelInfo | null> {
   return queryOne<EpisodeWithNovelInfo>(
-    `SELECT e.episode_id, e.title, e.content, e.release_date,
+    `SELECT e.episode_id, e.title, e.content, e.status, e.release_date,
             e.novel_id, n.title AS novel_title,
             u.username AS author_username
      FROM episodes e
@@ -79,7 +88,10 @@ export async function findEpisodeWithDetails(episodeId: number): Promise<Episode
   )
 }
 
-export async function updateEpisode(episodeId: number, data: Partial<Pick<EpisodeRow, "title" | "content">>): Promise<EpisodeRow | null> {
+export async function updateEpisode(
+  episodeId: number,
+  data: Partial<Pick<EpisodeRow, "title" | "content" | "status">>,
+): Promise<EpisodeRow | null> {
   const fields: string[] = []
   const values: QueryValue[] = []
 
@@ -93,6 +105,11 @@ export async function updateEpisode(episodeId: number, data: Partial<Pick<Episod
     values.push(data.content)
   }
 
+  if (typeof data.status !== "undefined") {
+    fields.push("status = ?")
+    values.push(data.status)
+  }
+
   if (fields.length === 0) {
     return queryOne<EpisodeRow>("SELECT * FROM episodes WHERE episode_id = ?", [episodeId])
   }
@@ -104,6 +121,37 @@ export async function updateEpisode(episodeId: number, data: Partial<Pick<Episod
 
 export async function deleteEpisode(episodeId: number): Promise<void> {
   await execute("DELETE FROM episodes WHERE episode_id = ?", [episodeId])
+}
+
+export async function countPendingEpisodesByNovel(novelId: number): Promise<number> {
+  const row = await queryOne<RowDataPacket>(
+    "SELECT COUNT(*) as total FROM episodes WHERE novel_id = ? AND status = 'PENDING_APPROVAL'",
+    [novelId],
+  )
+  return Number(row?.total ?? 0)
+}
+
+export interface PendingEpisodeRow extends RowDataPacket {
+  episode_id: number
+  title: string
+  novel_id: number
+  novel_title: string
+  author_username: string | null
+  status: string
+  submitted_at: Date
+}
+
+export async function listPendingEpisodes(): Promise<PendingEpisodeRow[]> {
+  return query<PendingEpisodeRow[]>(
+    `SELECT e.episode_id, e.title, e.novel_id, e.status, e.release_date AS submitted_at,
+            n.title AS novel_title, u.username AS author_username
+     FROM episodes e
+     LEFT JOIN novels n ON n.novel_id = e.novel_id
+     LEFT JOIN users u ON u.user_id = n.author_id
+     WHERE e.status = 'PENDING_APPROVAL'
+     ORDER BY e.release_date DESC`,
+    [],
+  )
 }
 
 export async function countEpisodesByNovel(novelId: number): Promise<number> {
@@ -120,4 +168,8 @@ export async function listEpisodeIdsForNovel(novelId: number): Promise<number[]>
     [novelId],
   )
   return rows.map((row) => Number(row.episode_id))
+}
+
+export async function approveAllEpisodesForNovel(novelId: number): Promise<void> {
+  await execute("UPDATE episodes SET status = 'APPROVED' WHERE novel_id = ?", [novelId])
 }

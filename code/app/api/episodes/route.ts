@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { listEpisodesByNovel, createEpisode } from "@/lib/repositories/episodes"
-import { findNovelById } from "@/lib/repositories/novels"
+import { findNovelById, updateNovel } from "@/lib/repositories/novels"
 import { uploadToGoogleDrive } from "@/lib/google-drive"
 
 function normaliseEpisodePayload(contentType: string | null, raw: NextRequest) {
@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         id: episode.episode_id,
         episode_id: episode.episode_id,
         title: episode.title,
+        status: episode.status,
         release_date: episode.release_date,
       })),
     )
@@ -106,6 +107,8 @@ export async function POST(request: NextRequest) {
       title,
       content: contentUrl,
     })
+
+    await updateNovel(novelId, { status: "PENDING_APPROVAL" })
 
     return NextResponse.json(episode, { status: 201 })
   } catch (error) {

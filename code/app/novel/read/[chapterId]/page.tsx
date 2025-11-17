@@ -63,9 +63,9 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
 
       <main className="container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8 text-center">
-          <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel.title}</p>
+          <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel_title ?? "Unknown"}</p>
           <h1 className="mb-2 text-4xl font-bold text-foreground">Episode {safeIndex + 1}</h1>
-          <p className="text-xl text-muted-foreground">Author {episode.novel.author?.username ?? "Unknown"}</p>
+          <p className="text-xl text-muted-foreground">Author {episode.author_username ?? "Unknown"}</p>
         </div>
 
         <div className="mb-8 rounded-3xl border border-border bg-card p-8">

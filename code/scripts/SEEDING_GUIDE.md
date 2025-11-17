@@ -72,7 +72,7 @@ mysql -u root -p novel_nest < scripts/seed_novels.sql
 # Simply open scripts/seed_novels.sql and execute it
 ```
 
-> **Note:** Prisma-based seeding has been retired. All data loading now flows through the mysql2 scripts above, so you can ignore any legacy `prisma` references.
+> **Note:** Prisma-based seeding has been retired. All data loading now flows through the mysql2 scripts above, so you can ignore any legacy `prisma` references. The old `prisma/schema.prisma` file has been removed entirely—if you need a quick ERD-style snapshot, use `scripts/DATABASE_SCHEMA_REFERENCE.md`, which mirrors the tables created in `scripts/seed_novels.sql`.
 
 ## Prerequisites
 

@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `novels` (
   FOREIGN KEY (`author_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL
 );
 
--- Harmonise table definitions with Prisma schema when tables already exist
+-- Harmonise table definitions with DATABASE_SCHEMA_REFERENCE.md when tables already exist
 ALTER TABLE `users`
   MODIFY COLUMN `role` VARCHAR(32) DEFAULT 'READER';
 
@@ -63,11 +63,25 @@ CREATE TABLE IF NOT EXISTS `episodes` (
   `novel_id` INT NOT NULL,
   `title` VARCHAR(255) NOT NULL,
   `content` TEXT,
+  `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') DEFAULT 'PENDING_APPROVAL',
   `is_locked` BOOLEAN DEFAULT 0,
   `price` INT,
   `release_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`novel_id`) REFERENCES `novels`(`novel_id`) ON DELETE CASCADE
 );
+
+ALTER TABLE `episodes`
+  ADD COLUMN IF NOT EXISTS `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL' AFTER `content`,
+  ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `release_date`;
+
+ALTER TABLE `episodes`
+  MODIFY COLUMN `status` ENUM('PENDING_APPROVAL', 'APPROVED', 'DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL',
+  MODIFY COLUMN `release_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  MODIFY COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+UPDATE `episodes`
+SET `status` = COALESCE(`status`, 'PENDING_APPROVAL');
 
 -- Review table
 CREATE TABLE IF NOT EXISTS `reviews` (
@@ -181,22 +195,22 @@ ON DUPLICATE KEY UPDATE
 -- ============================================================================
 
 -- Pride and Prejudice Episodes
-INSERT INTO `episodes` (`episode_id`, `novel_id`, `title`, `content`, `release_date`) 
+INSERT INTO `episodes` (`episode_id`, `novel_id`, `title`, `content`, `status`, `release_date`) 
 VALUES
-(3001, 2001, 'Chapter 1: First Impressions', 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.', '2025-09-01 10:00:00'),
-(3002, 2001, 'Chapter 2: The Bennet Family', 'Mr. and Mrs. Bennet had five daughters; and Mr. Bennet, who was fond of having witty dialogue, was amazed at his wife\'s talk of establishing them all. His wife was a woman of mean understanding, little information, and uncertain temper.', '2025-09-02 10:00:00'),
+(3001, 2001, 'Chapter 1: First Impressions', 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.', 'APPROVED', '2025-09-01 10:00:00'),
+(3002, 2001, 'Chapter 2: The Bennet Family', 'Mr. and Mrs. Bennet had five daughters; and Mr. Bennet, who was fond of having witty dialogue, was amazed at his wife's talk of establishing them all. His wife was a woman of mean understanding, little information, and uncertain temper.', 'APPROVED', '2025-09-02 10:00:00'),
 -- Dune Episodes
-(3003, 2002, 'Book One: Dune - Chapter 1', 'In the week before their departure to Arrakis, when all the final scurrying about had reached a nearly unbearable frenzy, an old woman came to visit the mother of the boy, Paul Atreides. Gaius Helen Mohiam, the Emperor\'s own Shadow, arrived at the Arrakis heighliner dock.', '2025-09-01 10:00:00'),
-(3004, 2002, 'Book One: Dune - Chapter 2', 'The spice must flow. This was the fundamental principle that had shaped the history of Arrakis. Paul understood this now, felt the weight of it pressing down upon him as he stood in the palace, watching the sandworm-killed landscape stretch endlessly toward the horizon.', '2025-09-02 10:00:00'),
+(3003, 2002, 'Book One: Dune - Chapter 1', 'In the week before their departure to Arrakis, when all the final scurrying about had reached a nearly unbearable frenzy, an old woman came to visit the mother of the boy, Paul Atreides. Gaius Helen Mohiam, the Emperor's own Shadow, arrived at the Arrakis heighliner dock.', 'APPROVED', '2025-09-01 10:00:00'),
+(3004, 2002, 'Book One: Dune - Chapter 2', 'The spice must flow. This was the fundamental principle that had shaped the history of Arrakis. Paul understood this now, felt the weight of it pressing down upon him as he stood in the palace, watching the sandworm-killed landscape stretch endlessly toward the horizon.', 'APPROVED', '2025-09-02 10:00:00'),
 -- The Hobbit Episodes
-(3005, 2003, 'Chapter 1: An Unexpected Party', 'In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and oozy smells, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.', '2025-09-01 10:00:00'),
-(3006, 2003, 'Chapter 2: Roast Mutton', 'When Bilbo woke, the sun was already shining through the window, and he realized that he had slept much later than intended. The dwarves were no longer sitting at the table; their breakfast was finished, and they were making ready to depart on their great adventure.', '2025-09-02 10:00:00'),
+(3005, 2003, 'Chapter 1: An Unexpected Party', 'In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and oozy smells, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.', 'APPROVED', '2025-09-01 10:00:00'),
+(3006, 2003, 'Chapter 2: Roast Mutton', 'When Bilbo woke, the sun was already shining through the window, and he realized that he had slept much later than intended. The dwarves were no longer sitting at the table; their breakfast was finished, and they were making ready to depart on their great adventure.', 'APPROVED', '2025-09-02 10:00:00'),
 -- To Kill a Mockingbird Episodes
-(3007, 2004, 'Part One, Chapter 1', 'When he was nearly thirteen, my brother Jem got his arm badly broken at the elbow. When it healed, and Jem\'s fears of never being able to play football were assuaged, he was seldom self-conscious about his injury.', '2025-09-01 10:00:00'),
-(3008, 2004, 'Part One, Chapter 2', 'Maycomb was an old town, but it was a tired old town when I first knew it. In rainy weather the streets turned to red slop; grass grew on the sidewalks, the courthouse sagged in the square. Somehow, it was hotter then; a black dog suffered on a summer\'s day.', '2025-09-02 10:00:00'),
+(3007, 2004, 'Part One, Chapter 1', 'When he was nearly thirteen, my brother Jem got his arm badly broken at the elbow. When it healed, and Jem's fears of never being able to play football were assuaged, he was seldom self-conscious about his injury.', 'APPROVED', '2025-09-01 10:00:00'),
+(3008, 2004, 'Part One, Chapter 2', 'Maycomb was an old town, but it was a tired old town when I first knew it. In rainy weather the streets turned to red slop; grass grew on the sidewalks, the courthouse sagged in the square. Somehow, it was hotter then; a black dog suffered on a summer's day.', 'APPROVED', '2025-09-02 10:00:00'),
 -- Nineteen Eighty-Four Episodes
-(3009, 2005, 'Part One, Chapter 1', 'It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.', '2025-09-01 10:00:00'),
-(3010, 2005, 'Part One, Chapter 2', 'The Party told you to reject the evidence of your eyes and ears. It was their final, most essential command. His heart sank as he thought of the endless war, the terrible crushing weight of the Party\'s power, and the inexorable march toward 1984.', '2025-09-02 10:00:00')
+(3009, 2005, 'Part One, Chapter 1', 'It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.', 'APPROVED', '2025-09-01 10:00:00'),
+(3010, 2005, 'Part One, Chapter 2', 'The Party told you to reject the evidence of your eyes and ears. It was their final, most essential command. His heart sank as he thought of the endless war, the terrible crushing weight of the Party's power, and the inexorable march toward 1984.', 'APPROVED', '2025-09-02 10:00:00')
 ON DUPLICATE KEY UPDATE episode_id = episode_id;
 
 -- ============================================================================
