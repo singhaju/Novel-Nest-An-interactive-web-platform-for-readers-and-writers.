@@ -24,13 +24,14 @@ export async function POST(req: NextRequest) {
 
     const name = fileName || `avatar-${Date.now()}`
 
-  const rawUrl = await uploadToGoogleDrive({ fileName: name, mimeType, fileContent: buffer, folderId: DEFAULT_AVATAR_FOLDER_ID })
+    const rawUrl = await uploadToGoogleDrive({ fileName: name, mimeType, fileContent: buffer, folderId: DEFAULT_AVATAR_FOLDER_ID })
     const fileId = extractDriveFileIdFromUrl(rawUrl)
     const proxyUrl = fileId ? buildAvatarProxyUrl(fileId) : rawUrl
 
     return NextResponse.json({ url: proxyUrl, rawUrl, fileId })
-  } catch (error: any) {
-    console.error('Upload error:', error)
-    return NextResponse.json({ error: error?.message || 'Upload failed' }, { status: 500 })
+  } catch (error: unknown) {
+    console.error("Upload error:", error)
+    const message = error instanceof Error ? error.message : "Upload failed"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

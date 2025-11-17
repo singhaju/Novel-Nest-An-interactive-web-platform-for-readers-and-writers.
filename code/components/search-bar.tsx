@@ -12,6 +12,7 @@ type Suggestion = {
   title: string
   summary?: string
   cover_url?: string
+  cover_image?: string | null
   author?: {
     username?: string
   }
@@ -162,7 +163,8 @@ export function SearchBar({ initialQuery, className }: SearchBarProps) {
           ) : hasResults ? (
             <ul className="divide-y divide-border">
               {suggestions.map((novel) => {
-                const coverSrc = normalizeCoverImageUrl(novel.cover_url)
+                const coverCandidate = novel.cover_url ?? novel.cover_image ?? null
+                const coverSrc = normalizeCoverImageUrl(coverCandidate)
                 return (
                 <li key={novel.id}>
                   <Link

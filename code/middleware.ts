@@ -27,8 +27,24 @@ export default withAuth(
       return NextResponse.redirect(new URL("/", req.url));
     }
 
-    if (pathname.startsWith("/author") && !["writer", "admin", "developer", "superadmin"].includes(tokenRole ?? "")) {
-      return NextResponse.redirect(new URL("/", req.url));
+    const isAuthorPath = pathname.startsWith("/author")
+    const allowedAuthorRoles = ["writer", "author", "admin", "developer", "superadmin"]
+    const isAuthorCreatePage = pathname.startsWith("/author/novels/create")
+
+    if (isAuthorPath && !allowedAuthorRoles.includes(tokenRole ?? "")) {
+      if (isAuthorCreatePage && tokenRole) {
+        return NextResponse.next()
+      }
+
+      if (!tokenRole) {
+        const loginUrl = new URL("/auth/login", req.url)
+        loginUrl.searchParams.set("callbackUrl", "/author/novels/create")
+        return NextResponse.redirect(loginUrl)
+      }
+
+      const upgradeUrl = new URL("/author/novels/create", req.url)
+      upgradeUrl.searchParams.set("upgrade", "1")
+      return NextResponse.redirect(upgradeUrl)
     }
 
     return NextResponse.next();

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { findNovelById } from "@/lib/repositories/novels"
 import { toggleNovelLike } from "@/lib/repositories/likes"
+import { canUseReaderFeatures, getSessionRole } from "@/lib/permissions"
 
 // POST /api/likes - Toggle like (not in original backend, adding for frontend compatibility)
 export async function POST(request: NextRequest) {
@@ -10,6 +11,11 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const role = getSessionRole(session)
+    if (!canUseReaderFeatures(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = await request.json()

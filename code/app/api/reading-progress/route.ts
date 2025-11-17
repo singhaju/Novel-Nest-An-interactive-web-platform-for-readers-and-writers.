@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { updateReadingProgress } from "@/lib/repositories/reading-progress"
+import { canUseReaderFeatures, getSessionRole } from "@/lib/permissions"
 
 // POST /api/reading-progress - Update reading progress
 export async function POST(request: NextRequest) {
@@ -9,6 +10,11 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const role = getSessionRole(session)
+    if (!canUseReaderFeatures(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = await request.json()

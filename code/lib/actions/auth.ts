@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { ensureUserRole } from "@/lib/permissions"
 
 export async function signUp(formData: FormData) {
   const username = formData.get("username") as string
@@ -39,15 +40,17 @@ export async function signOut() {
   redirect("/api/auth/signout")
 }
 
-export async function getCurrentUser() {
-  const session = await auth()
+export async function getCurrentUser(preloadedSession?: Awaited<ReturnType<typeof auth>> | null) {
+  const session = preloadedSession ?? (await auth())
 
   if (!session?.user) return null
+
+  const role = ensureUserRole((session.user as any).role)
 
   return {
     id: (session.user as any).id,
     username: session.user.name,
     email: session.user.email,
-    role: typeof (session.user as any).role === "string" ? (session.user as any).role.toLowerCase() : "reader",
+    role,
   }
 }

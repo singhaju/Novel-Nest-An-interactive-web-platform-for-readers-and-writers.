@@ -27,7 +27,7 @@ export function normalizeTag(raw: string | undefined | null): string | null {
 
   let normalized = String(raw)
     .toLowerCase()
-    .replace(/[\[\]"]+/g, "")
+    .replace(/[[\]"]+/g, "")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()

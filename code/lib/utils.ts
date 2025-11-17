@@ -53,6 +53,7 @@ function normalizeDriveAssetUrl(value: string | null | undefined, segment: Drive
 
   const fileId = extractDriveFileIdFromUrl(value)
   if (fileId) {
+    // Always proxy through our API so private Drive files remain accessible.
     return buildDriveProxyUrl(fileId, segment)
   }
 

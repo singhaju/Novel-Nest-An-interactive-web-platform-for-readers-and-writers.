@@ -1,4 +1,4 @@
-export type UserRole = "reader" | "writer" | "author" | "admin" | "developer" | "superadmin"
+export type UserRole = "reader" | "writer" | "admin" | "developer" | "superadmin"
 export type NovelStatus = "ongoing" | "completed" | "hiatus" | "pending_approval"
 
 export interface Profile {
@@ -17,6 +17,7 @@ export interface Novel {
   author_id: string
   summary?: string
   cover_url?: string
+  cover_image?: string | null
   status: NovelStatus
   total_views: number
   total_likes: number

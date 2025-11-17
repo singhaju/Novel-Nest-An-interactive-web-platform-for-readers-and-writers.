@@ -7,6 +7,7 @@ import { findEpisodeWithDetails, listEpisodeIdsForNovel } from "@/lib/repositori
 import { upsertReadingProgress } from "@/lib/repositories/reading-progress"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { ViewTracker } from "@/components/view-tracker"
 
 async function loadContent(source: string | null) {
   if (!source) {
@@ -62,10 +63,11 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
       <Header />
 
       <main className="container mx-auto max-w-4xl px-4 py-8">
+        <ViewTracker novelId={episode.novel_id} />
         <div className="mb-8 text-center">
-          <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel.title}</p>
+          <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel_title ?? "Untitled"}</p>
           <h1 className="mb-2 text-4xl font-bold text-foreground">Episode {safeIndex + 1}</h1>
-          <p className="text-xl text-muted-foreground">Author {episode.novel.author?.username ?? "Unknown"}</p>
+          <p className="text-xl text-muted-foreground">Author {episode.author_username ?? "Unknown"}</p>
         </div>
 
         <div className="mb-8 rounded-3xl border border-border bg-card p-8">

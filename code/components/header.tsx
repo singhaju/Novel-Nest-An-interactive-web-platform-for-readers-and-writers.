@@ -1,6 +1,9 @@
 import Link from "next/link"
 import { Star, BarChart3, User } from "lucide-react"
+
 import { getCurrentUser } from "@/lib/actions/auth"
+import { auth } from "@/lib/auth"
+import { getSessionRole } from "@/lib/permissions"
 import { UserMenu } from "./user-menu"
 import { SearchBar } from "./search-bar"
 
@@ -9,8 +12,11 @@ interface HeaderProps {
 }
 
 export async function Header({ initialQuery }: HeaderProps = {}) {
-  const user = await getCurrentUser()
+  const session = await auth()
+  const user = await getCurrentUser(session)
   const role = typeof user?.role === "string" ? user.role.toLowerCase() : undefined
+  const appRole = getSessionRole(session)
+  const roleLabel = user ? role ?? "reader" : "guest"
 
   return (
     <header className="border-b border-border bg-background">
@@ -28,6 +34,10 @@ export async function Header({ initialQuery }: HeaderProps = {}) {
 
         {/* Right Icons */}
         <div className="flex items-center gap-4">
+          <div className="hidden items-center gap-2 rounded-full border border-border/70 px-3 py-1 text-xs font-semibold text-muted-foreground sm:inline-flex">
+            <span className="uppercase tracking-wide text-[10px] text-muted-foreground/80">Role</span>
+            <span className="capitalize text-foreground">{roleLabel}</span>
+          </div>
           {user && role && ["admin", "superadmin", "developer"].includes(role) && (
             <Link
               href={role === "developer" ? "/developer" : "/admin"}
@@ -46,6 +56,19 @@ export async function Header({ initialQuery }: HeaderProps = {}) {
           ) : (
             <Link href="/auth/login" className="text-foreground hover:text-muted-foreground">
               <User className="h-8 w-8" />
+            </Link>
+          )}
+          {!user && (
+            <Link href="/auth/signup" className="hidden text-xs font-medium text-primary hover:text-primary/80 sm:inline-flex">
+              Become a reader
+            </Link>
+          )}
+          {appRole === "reader" && (
+            <Link
+              href="/author/novels/create"
+              className="hidden text-xs font-medium text-primary hover:text-primary/80 sm:inline-flex"
+            >
+              Write a story
             </Link>
           )}
         </div>

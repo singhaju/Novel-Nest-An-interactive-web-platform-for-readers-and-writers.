@@ -11,9 +11,10 @@ import { ShareButton } from "@/components/share-button"
 import { ReviewForm } from "@/components/review-form"
 import { auth } from "@/lib/auth"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
-import { getNovelDetail, incrementNovelViews } from "@/lib/repositories/novels"
+import { getNovelDetail } from "@/lib/repositories/novels"
 import { hasUserLikedNovel } from "@/lib/repositories/likes"
 import { isNovelInWishlist } from "@/lib/repositories/wishlist"
+import { canUseReaderFeatures, getSessionRole } from "@/lib/permissions"
 
 function formatStatus(status: string) {
   return status.toLowerCase().replace(/_/g, " ")
@@ -23,6 +24,7 @@ type PageParams = { id: string }
 
 export default async function NovelDetailPage(props: { params: PageParams } | { params: Promise<PageParams> }) {
   const session = await auth()
+  const canUseReaderTools = canUseReaderFeatures(getSessionRole(session))
   const resolvedParams = props.params instanceof Promise ? await props.params : props.params
   const novelId = Number.parseInt(resolvedParams.id)
 
@@ -37,8 +39,6 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
   if (!detail) {
     notFound()
   }
-
-  await incrementNovelViews(novelId)
 
   const novel = {
     ...detail.novel,
@@ -69,6 +69,8 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
     userId ? hasUserLikedNovel(userId, novelId) : Promise.resolve(false),
     userId ? isNovelInWishlist(userId, novelId) : Promise.resolve(false),
   ])
+
+  const myReview = userId ? novel.reviews.find((review) => review.user_id === userId) ?? null : null
 
   const episodes = novel.episodes.map((episode, index) => ({
     order: index + 1,
@@ -157,7 +159,7 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
                   {novel.tags
                     .split(",")
                     .map((tag) => tag.trim())
-                    .map((tag) => tag.replace(/[\[\]"]/g, ""))
+                    .map((tag) => tag.replace(/[[\]"]/g, ""))
                     .map((tag) => tag.replace(/_/g, " "))
                     .map((tag) => tag.replace(/\s+/g, " ").trim())
                     .filter(Boolean)
@@ -206,8 +208,16 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
 
             <div className="rounded-3xl border border-border bg-card p-6">
               <h2 className="mb-4 text-xl font-semibold">Reviews</h2>
-              {session?.user ? (
-                <ReviewForm novelId={novel.novel_id} className="mb-4" />
+              {canUseReaderTools ? (
+                <ReviewForm
+                  novelId={novel.novel_id}
+                  className="mb-4"
+                  initialReview={myReview ? { review_id: myReview.review_id, rating: myReview.rating, comment: myReview.comment } : null}
+                />
+              ) : session?.user ? (
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Your account cannot post reviews yet. Please contact support if this is unexpected.
+                </p>
               ) : (
                 <p className="mb-4 text-sm text-muted-foreground">
                   <Link href="/auth/login" className="font-medium text-primary hover:underline">

@@ -9,14 +9,15 @@ interface NovelCardProps {
 }
 
 export function NovelCard({ novel }: NovelCardProps) {
-  const normalizedCover = normalizeCoverImageUrl(novel.cover_url)
+  const coverCandidate = novel.cover_url ?? novel.cover_image ?? null
+  const normalizedCover = normalizeCoverImageUrl(coverCandidate)
   const coverSrc = normalizedCover && normalizedCover.trim().length > 0 ? normalizedCover : "/placeholder.svg"
 
   return (
     <Link href={`/novel/${novel.id}`} className="group">
       <div className="space-y-2">
-        {/* Cover Image */}
-  <div className="relative aspect-3/4 overflow-hidden rounded-2xl bg-linear-to-br from-blue-100 to-green-100">
+          {/* Cover Image */}
+          <div className="relative aspect-3/4 overflow-hidden rounded-2xl bg-linear-to-br from-blue-100 to-green-100">
           <Image
             src={coverSrc}
             alt={novel.title}
