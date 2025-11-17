@@ -70,7 +70,11 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
     userId ? isNovelInWishlist(userId, novelId) : Promise.resolve(false),
   ])
 
-  const episodes = novel.episodes.map((episode, index) => ({
+  const approvedEpisodes = novel.episodes.filter(
+    (episode) => (episode.status ?? "").toUpperCase() === "APPROVED",
+  )
+
+  const episodes = approvedEpisodes.map((episode, index) => ({
     order: index + 1,
     ...episode,
   }))
@@ -228,7 +232,7 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
                             {normalizeProfileImageUrl(review.user.profile_picture) ? (
                               <Image
                                 src={normalizeProfileImageUrl(review.user.profile_picture)!}
-                                alt={review.user.username}
+                                alt={review.user.username ?? "Reviewer avatar"}
                                 width={36}
                                 height={36}
                                 className="h-9 w-9 object-cover"

@@ -26,6 +26,7 @@ export interface EpisodeWithNovelInfo extends RowDataPacket {
   updated_at: Date
   novel_id: number
   novel_title: string
+  author_id: number | null
   author_username: string | null
 }
 
@@ -78,7 +79,7 @@ export async function findEpisodeWithNovel(episodeId: number): Promise<EpisodeWi
 export async function findEpisodeWithDetails(episodeId: number): Promise<EpisodeWithNovelInfo | null> {
   return queryOne<EpisodeWithNovelInfo>(
     `SELECT e.episode_id, e.title, e.content, e.status, e.release_date,
-            e.novel_id, n.title AS novel_title,
+            e.novel_id, n.title AS novel_title, n.author_id AS author_id,
             u.username AS author_username
      FROM episodes e
      LEFT JOIN novels n ON n.novel_id = e.novel_id
@@ -162,10 +163,23 @@ export async function countEpisodesByNovel(novelId: number): Promise<number> {
   return row ? Number(row.total) : 0
 }
 
-export async function listEpisodeIdsForNovel(novelId: number): Promise<number[]> {
+export async function listEpisodeIdsForNovel(
+  novelId: number,
+  options: { status?: string } = {},
+): Promise<number[]> {
+  const conditions = ["novel_id = ?"]
+  const params: QueryValue[] = [novelId]
+
+  if (options.status) {
+    conditions.push("status = ?")
+    params.push(options.status.toUpperCase())
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
+
   const rows = await query<RowDataPacket[]>(
-    `SELECT episode_id FROM episodes WHERE novel_id = ? ORDER BY episode_id ASC`,
-    [novelId],
+    `SELECT episode_id FROM episodes ${whereClause} ORDER BY episode_id ASC`,
+    params,
   )
   return rows.map((row) => Number(row.episode_id))
 }

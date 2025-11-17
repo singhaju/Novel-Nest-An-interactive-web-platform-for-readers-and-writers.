@@ -41,15 +41,28 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
     notFound()
   }
 
-  const orderedEpisodeIds = await listEpisodeIdsForNovel(episode.novel_id)
+  const session = await auth()
+  const userId = session?.user ? Number.parseInt((session.user as any).id) : null
+  const roleRaw = session?.user ? (session.user as any).role : undefined
+  const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : "reader"
+  const privilegedRoles = ["admin", "developer", "superadmin"]
+  const isPrivileged = privilegedRoles.includes(role)
+  const isAuthor = typeof userId === "number" && Number.isFinite(userId) && episode.author_id === userId
+  const restrictToApproved = !(isAuthor || isPrivileged)
+
+  if (episode.status !== "APPROVED" && restrictToApproved) {
+    notFound()
+  }
+
+  const orderedEpisodeIds = await listEpisodeIdsForNovel(
+    episode.novel_id,
+    restrictToApproved ? { status: "APPROVED" } : {},
+  )
 
   const currentIndex = orderedEpisodeIds.findIndex((id) => id === episodeId)
   const safeIndex = currentIndex >= 0 ? currentIndex : 0
   const previousEpisodeId = orderedEpisodeIds[safeIndex - 1]
   const nextEpisodeId = orderedEpisodeIds[safeIndex + 1]
-
-  const session = await auth()
-  const userId = session?.user ? Number.parseInt((session.user as any).id) : null
 
   if (userId && Number.isFinite(userId)) {
     await upsertReadingProgress(userId, episode.novel_id, episode.episode_id)

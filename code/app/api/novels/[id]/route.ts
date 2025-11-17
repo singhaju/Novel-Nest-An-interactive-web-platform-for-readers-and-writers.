@@ -31,6 +31,10 @@ export async function GET(request: NextRequest, context: any) {
 
     await incrementNovelViews(novelId)
 
+    const approvedEpisodes = detail.episodes.filter(
+      (episode) => (episode.status ?? "").toUpperCase() === "APPROVED",
+    )
+
     const normalizedNovel = {
       ...detail.novel,
       cover_image: normalizeCoverImageUrl(detail.novel.cover_image) ?? null,
@@ -42,7 +46,7 @@ export async function GET(request: NextRequest, context: any) {
             bio: detail.novel.author_bio ?? null,
           }
         : null,
-      episodes: detail.episodes,
+      episodes: approvedEpisodes,
       reviews: detail.reviews.map((review) => ({
         review_id: review.review_id,
         novel_id: review.novel_id,
