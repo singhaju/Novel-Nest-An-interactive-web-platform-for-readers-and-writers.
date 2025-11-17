@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createUser, findUserByEmailOrUsername } from "@/lib/repositories/users"
 import { hashPassword } from "@/lib/security"
+import { recordUserCreationToSheet } from "@/lib/google-sheets"
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,6 +33,14 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       role: assignedRole.toLowerCase() as any,
+    })
+
+    await recordUserCreationToSheet({
+      id: user.user_id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      createdAt: user.created_at as Date | string | null | undefined,
     })
 
     const responsePayload = {

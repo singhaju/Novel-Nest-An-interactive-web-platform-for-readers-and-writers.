@@ -2,6 +2,7 @@
 
 import { User } from "lucide-react"
 import Link from "next/link"
+import { signOut } from "next-auth/react"
 import type { Profile } from "@/lib/types/database"
 import {
   DropdownMenu,
@@ -10,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { signOut } from "@/lib/actions/auth"
 
 interface UserMenuProps {
   user: Profile
@@ -18,6 +18,10 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const role = typeof user.role === "string" ? user.role.toLowerCase() : "reader"
+
+  const handleSignOut = () => {
+    void signOut({ callbackUrl: "/auth/login" })
+  }
 
   return (
     <DropdownMenu>
@@ -44,7 +48,7 @@ export function UserMenu({ user }: UserMenuProps) {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
+        <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -4,6 +4,7 @@ import { listRecentNovels } from "@/lib/repositories/novels"
 import { getCommentCount, getEpisodeCount, getNovelCounts, getUserCount } from "@/lib/repositories/stats"
 import { redirect } from "next/navigation"
 import { Database, HardDrive, Activity, Users } from "lucide-react"
+import { PrivilegedInviteForm } from "@/components/privileged-invite-form"
 
 export default async function DeveloperDashboardPage() {
   const session = await auth()
@@ -138,6 +139,17 @@ export default async function DeveloperDashboardPage() {
             </div>
           </div>
         </div>
+
+        {role === "developer" && (
+          <div className="mt-10 rounded-3xl border-2 border-border bg-card p-6">
+            <h3 className="mb-2 text-lg font-semibold text-foreground">Invite a developer</h3>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Share access with teammates by creating a developer account. Developers can access this dashboard and review
+              platform insights.
+            </p>
+            <PrivilegedInviteForm allowedRoles={["developer"]} />
+          </div>
+        )}
       </main>
     </div>
   )

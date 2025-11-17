@@ -57,13 +57,13 @@ export default async function ProfilePage() {
   }
 
   const profileImageUrl = normalizeProfileImageUrl(dbUser.profile_picture)
-
   const [readingProgress, likedNovels, wishlistItems, followingAuthors] = await Promise.all([
     listReadingProgressByUser(userId),
     listLikedNovelsByUser(userId),
     listWishlistByUser(userId),
     listFollowingAuthors(userId),
   ])
+
 
   const likedNovelCards = likedNovels.map((item) => mapNovelForGrid(item))
 
@@ -232,6 +232,8 @@ export default async function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* User Management section removed */}
           </div>
         </div>
       </main>

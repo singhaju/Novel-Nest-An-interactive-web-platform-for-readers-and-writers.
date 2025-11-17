@@ -56,6 +56,8 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
   }
 
   const content = await loadContent(episode.content)
+  const storyTitle = episode.novel_title ?? "Unknown"
+  const authorName = episode.author_username ?? "Unknown"
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,9 +65,15 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
 
       <main className="container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8 text-center">
+<<<<<<< Updated upstream
           <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel_title ?? "Unknown"}</p>
           <h1 className="mb-2 text-4xl font-bold text-foreground">Episode {safeIndex + 1}</h1>
           <p className="text-xl text-muted-foreground">Author {episode.author_username ?? "Unknown"}</p>
+=======
+          <p className="mb-2 text-sm text-muted-foreground">Story: {storyTitle}</p>
+          <h1 className="mb-2 text-4xl font-bold text-foreground">Episode {safeIndex + 1}</h1>
+          <p className="text-xl text-muted-foreground">Author {authorName}</p>
+>>>>>>> Stashed changes
         </div>
 
         <div className="mb-8 rounded-3xl border border-border bg-card p-8">

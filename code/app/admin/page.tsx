@@ -4,8 +4,16 @@ import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+<<<<<<< Updated upstream
 import { Users, BookOpen, AlertCircle, NotebookPen } from "lucide-react"
 import { getEpisodeReviewCounts, getNovelCounts, getUserCount } from "@/lib/repositories/stats"
+=======
+import { Users, BookOpen, AlertCircle } from "lucide-react"
+import { getNovelCounts, getUserCount } from "@/lib/repositories/stats"
+import { listUsers } from "@/lib/repositories/users"
+import { PrivilegedInviteForm } from "@/components/privileged-invite-form"
+import { SuperadminUserManagementTable } from "@/components/superadmin-user-management-table"
+>>>>>>> Stashed changes
 
 export default async function AdminDashboardPage() {
   // ✅ 1. Protect admin page using new helper
@@ -16,10 +24,17 @@ export default async function AdminDashboardPage() {
     redirect("/")
   }
 
+<<<<<<< Updated upstream
   const [userCount, novelCounts, episodeCounts] = await Promise.all([
     getUserCount(),
     getNovelCounts(),
     getEpisodeReviewCounts(),
+=======
+  const [userCount, novelCounts, managedUsers] = await Promise.all([
+    getUserCount(),
+    getNovelCounts(),
+    role === "superadmin" ? listUsers(500) : Promise.resolve([]),
+>>>>>>> Stashed changes
   ])
   const totalUsers = userCount
   const totalNovels = novelCounts.total
@@ -27,7 +42,19 @@ export default async function AdminDashboardPage() {
   const pendingEpisodes = episodeCounts.pending
 
   const hasPending = pendingNovels > 0
+<<<<<<< Updated upstream
   const hasPendingEpisodes = pendingEpisodes > 0
+=======
+  const userManagementHref = role === "superadmin" ? "/admin#user-management" : "/admin/users"
+  const managedUsersForClient = role === "superadmin"
+    ? managedUsers.map((profile) => ({
+        id: profile.user_id,
+        username: profile.username ?? null,
+        role: profile.role.toLowerCase(),
+        joinedAt: profile.created_at.toISOString(),
+      }))
+    : []
+>>>>>>> Stashed changes
 
   // ✅ 5. Page UI
   return (
@@ -95,8 +122,13 @@ export default async function AdminDashboardPage() {
         {/* Quick Actions */}
         <section>
           <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
+<<<<<<< Updated upstream
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link href="/admin/users">
+=======
+          <div className="grid gap-4 md:grid-cols-3">
+            <Link href={userManagementHref}>
+>>>>>>> Stashed changes
               <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
                 User Management
               </Button>
@@ -118,6 +150,29 @@ export default async function AdminDashboardPage() {
             </Link>
           </div>
         </section>
+
+        {role === "superadmin" && (
+          <section id="user-management" className="mt-12 space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">User Management</h2>
+              <p className="text-sm text-muted-foreground">
+                Provision new accounts and review platform roles without leaving the dashboard.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border-2 border-border bg-card p-6">
+              <PrivilegedInviteForm
+                allowedRoles={["reader", "writer", "admin", "developer", "superadmin"]}
+                title="Create a new account"
+                description="Super Admins can provision any role, including fellow Super Admins."
+              />
+            </div>
+
+            <div className="rounded-3xl border-2 border-border bg-card p-6">
+              <SuperadminUserManagementTable users={managedUsersForClient} />
+            </div>
+          </section>
+        )}
       </main>
     </div>
   )
