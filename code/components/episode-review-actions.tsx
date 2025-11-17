@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "./ui/button"
 import { Check, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 type EpisodeReviewActionsProps = {
   episodeId: number | string
@@ -28,6 +28,7 @@ export function EpisodeReviewActions({ episodeId, redirectTo }: EpisodeReviewAct
       const response = await fetch(`/api/episodes/${episodeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: decision }),
       })
 
@@ -47,25 +48,30 @@ export function EpisodeReviewActions({ episodeId, redirectTo }: EpisodeReviewAct
 
   return (
     <div className="flex gap-2">
-      <Button
-        size="sm"
-        className="rounded-full"
+      <button
+        type="button"
+        className={cn(
+          "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition-colors hover:bg-emerald-100",
+          loading && loading !== "approve" && "opacity-60",
+        )}
         disabled={loading !== null}
         onClick={() => review("APPROVED")}
       >
         <Check className="mr-1 h-4 w-4" />
         {loading === "approve" ? "Approving..." : "Approve"}
-      </Button>
-      <Button
-        size="sm"
-        variant="destructive"
-        className="rounded-full"
+      </button>
+      <button
+        type="button"
+        className={cn(
+          "inline-flex items-center rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-900 shadow-sm transition-colors hover:bg-rose-100",
+          loading && loading !== "deny" && "opacity-60",
+        )}
         disabled={loading !== null}
         onClick={() => review("DENIAL")}
       >
         <X className="mr-1 h-4 w-4" />
         {loading === "deny" ? "Denying..." : "Deny"}
-      </Button>
+      </button>
     </div>
   )
 }

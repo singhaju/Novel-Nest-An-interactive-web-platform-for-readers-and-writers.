@@ -50,12 +50,20 @@ export default async function PendingEpisodesPage() {
                     <p className="text-xs text-muted-foreground">
                       Submitted {new Date(episode.submitted_at).toLocaleString()}
                     </p>
-                    <Link
-                      href={`/admin/episodes/pending/${episode.episode_id}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      View details
-                    </Link>
+                    <div className="flex flex-wrap gap-3">
+                      <Link
+                        href={`/admin/episodes/pending/${episode.episode_id}`}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        View details
+                      </Link>
+                      <Link
+                        href={`/author/novels/${episode.novel_id}/chapters/${episode.episode_id}`}
+                        className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100"
+                      >
+                        Edit episode
+                      </Link>
+                    </div>
                   </div>
                   <EpisodeReviewActions episodeId={episode.episode_id} />
                 </div>

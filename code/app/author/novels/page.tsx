@@ -19,6 +19,8 @@ export default async function AuthorNovelsPage() {
 
   const novels = await listNovelsForManagement(canManageAll ? {} : { authorId })
 
+  const hasPendingEpisodes = (novel: (typeof novels)[number]) => Number(novel.pending_episode_count ?? 0) > 0
+
   const statusStyles: Record<string, { label: string; className: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
     pending_approval: {
       label: "In review",
@@ -47,6 +49,9 @@ export default async function AuthorNovelsPage() {
     approval: "approved",
     on_going: "approved",
     ongoing: "approved",
+    completed: "approved",
+    hiatus: "approved",
+    published: "approved",
     denial: "denial",
     denied: "denial",
     rejected: "denial",
@@ -73,6 +78,7 @@ export default async function AuthorNovelsPage() {
               const badgeLabel = statusStyle?.label ?? statusKey.replace(/_/g, " ")
               const badgeVariant = statusStyle?.variant ?? "secondary"
               const badgeClassName = ["capitalize", statusStyle?.className ?? ""].filter(Boolean).join(" ")
+              const pendingEpisodes = hasPendingEpisodes(novel)
 
               return (
                 <Link
@@ -90,6 +96,11 @@ export default async function AuthorNovelsPage() {
                         <Badge variant={badgeVariant} className={badgeClassName}>
                           {badgeLabel}
                         </Badge>
+                        {pendingEpisodes && (
+                          <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-900">
+                            Episodes pending review
+                          </Badge>
+                        )}
                         <span>{Number(novel.views ?? 0).toLocaleString()} views</span>
                         <span>{Number(novel.likes ?? 0).toLocaleString()} likes</span>
                         <span>Rating: {Number(novel.rating ?? 0).toFixed(1)}</span>

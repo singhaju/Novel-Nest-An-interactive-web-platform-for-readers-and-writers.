@@ -20,16 +20,17 @@ export default async function AuthorDashboardPage() {
 
   const novels = await listNovelsForManagement({ authorId })
 
+  const hasPendingEpisodes = (novel: (typeof novels)[number]) => Number(novel.pending_episode_count ?? 0) > 0
+  const isNovelUnderReview = (novel: (typeof novels)[number]) => {
+    const baseStatus = (novel.status ?? "").toUpperCase()
+    return baseStatus === "PENDING_APPROVAL" || hasPendingEpisodes(novel)
+  }
+
   const totalEpisodes = novels.reduce((sum, novel) => sum + Number(novel.episode_count ?? 0), 0)
   const totalViews = novels.reduce((sum, novel) => sum + Number(novel.views ?? 0), 0)
-  const pendingNovels = novels.filter((novel) => (novel.status ?? "").toUpperCase() === "PENDING_APPROVAL")
+  const pendingNovels = novels.filter(isNovelUnderReview)
 
-  const recentNovels = novels.slice(0, 6).map((novel) => ({
-    id: novel.novel_id,
-    title: novel.title,
-    status: (novel.status ?? "").toLowerCase().replace(/\s+/g, "_"),
-    views: Number(novel.views ?? 0),
-  }))
+  const recentNovels = novels.slice(0, 6)
 
   const statusStyles: Record<string, { label: string; className: string; variant?: "default" | "secondary" | "destructive" | "outline" }> = {
     pending_approval: {
@@ -59,6 +60,9 @@ export default async function AuthorDashboardPage() {
     approval: "approved",
     on_going: "approved",
     ongoing: "approved",
+    completed: "approved",
+    hiatus: "approved",
+    published: "approved",
     denial: "denial",
     denied: "denial",
     rejected: "denial",
@@ -144,17 +148,18 @@ export default async function AuthorDashboardPage() {
           {recentNovels.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {recentNovels.map((novel) => {
-                const normalizedStatus = novel.status
+                const normalizedStatus = (novel.status ?? "").toLowerCase().replace(/\s+/g, "_")
                 const statusKey = statusAliases[normalizedStatus] ?? normalizedStatus
                 const statusStyle = statusStyles[statusKey]
                 const badgeLabel = statusStyle?.label ?? statusKey.replace(/_/g, " ")
                 const badgeVariant = statusStyle?.variant ?? "secondary"
                 const badgeClassName = ["capitalize", statusStyle?.className ?? ""].filter(Boolean).join(" ")
+                const pendingEpisodes = hasPendingEpisodes(novel)
 
                 return (
                   <Link
-                    key={novel.id}
-                    href={`/author/novels/${novel.id}`}
+                    key={novel.novel_id}
+                    href={`/author/novels/${novel.novel_id}`}
                     className="rounded-2xl border border-border bg-card p-6 transition-colors hover:bg-accent"
                   >
                     <h3 className="mb-2 text-lg font-semibold">{novel.title}</h3>
@@ -162,7 +167,12 @@ export default async function AuthorDashboardPage() {
                       <Badge variant={badgeVariant} className={badgeClassName}>
                         {badgeLabel}
                       </Badge>
-                      <span>{novel.views.toLocaleString()} views</span>
+                      {pendingEpisodes && (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-900">
+                          Episodes pending review
+                        </Badge>
+                      )}
+                      <span>{Number(novel.views ?? 0).toLocaleString()} views</span>
                     </div>
                   </Link>
                 )

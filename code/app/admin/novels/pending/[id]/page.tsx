@@ -98,8 +98,16 @@ export default async function PendingNovelReviewPage(
             )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap items-center gap-4">
-              <ApproveNovelButton novelId={String(novel.novel_id)} redirectTo="/admin/novels/pending" />
+            <div className="flex w-full justify-end">
+              <div className="flex flex-col items-end gap-3">
+                <ApproveNovelButton novelId={String(novel.novel_id)} redirectTo="/admin/novels/pending" />
+                <Link
+                  href={`/author/novels/${novel.novel_id}`}
+                  className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100"
+                >
+                  Edit novel
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

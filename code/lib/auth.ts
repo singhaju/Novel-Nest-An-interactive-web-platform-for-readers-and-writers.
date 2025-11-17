@@ -47,6 +47,10 @@ export const authConfig = {
           await updateUserPassword(user.user_id, upgradedHash)
         }
 
+        if (user.is_banned) {
+          throw new Error("This account has been banned")
+        }
+
         const normalizedRole = typeof user.role === "string" ? user.role.toLowerCase() : "reader"
 
         return {
@@ -70,9 +74,22 @@ export const authConfig = {
       if (user) {
         token.id = user.id
         token.role = typeof user.role === "string" ? user.role.toLowerCase() : token.role ?? "reader"
-  const normalizedProfile = normalizeProfileImageUrl((user as any).profile_picture)
-  token.profile_picture = normalizedProfile ?? token.profile_picture
+        const normalizedProfile = normalizeProfileImageUrl((user as any).profile_picture)
+        token.profile_picture = normalizedProfile ?? token.profile_picture
+      } else if (token?.id) {
+        const userId = typeof token.id === "string" ? Number.parseInt(token.id, 10) : token.id
+
+        if (!Number.isNaN(userId)) {
+          const dbUser = await findUserById(userId)
+
+          if (dbUser) {
+            token.role = typeof dbUser.role === "string" ? dbUser.role.toLowerCase() : token.role ?? "reader"
+            const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture ?? undefined)
+            token.profile_picture = normalizedProfile ?? token.profile_picture
+          }
+        }
       }
+
       if (token.role && typeof token.role === "string") {
         token.role = token.role.toLowerCase()
       }
@@ -87,6 +104,10 @@ export const authConfig = {
 
         if (!Number.isNaN(userId)) {
           const dbUser = await findUserById(userId)
+
+          if (dbUser?.is_banned) {
+            return null
+          }
 
           if (dbUser) {
             session.user.username = dbUser.username

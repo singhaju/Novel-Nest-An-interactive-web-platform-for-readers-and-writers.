@@ -46,6 +46,12 @@ export default async function PendingNovelsPage() {
                       >
                         View submission
                       </Link>
+                      <Link
+                        href={`/author/novels/${novel.novel_id}`}
+                        className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100"
+                      >
+                        Edit novel
+                      </Link>
                       {novel.cover_image && (
                         <span className="text-sm text-muted-foreground">
                           Cover provided

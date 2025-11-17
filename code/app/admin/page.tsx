@@ -40,6 +40,7 @@ export default async function AdminDashboardPage() {
         username: profile.username ?? null,
         role: profile.role.toLowerCase(),
         joinedAt: profile.created_at.toISOString(),
+        isBanned: Boolean(profile.is_banned),
       }))
     : []
 
@@ -70,20 +71,20 @@ export default async function AdminDashboardPage() {
             <p className="text-5xl font-bold">{totalNovels.toLocaleString()}</p>
           </div>
 
-          {/* Pending Reviews */}
+          {/* Pending Novels */}
           <Link href="/admin/novels/pending" className="block">
             <div
               className={cn(
                 "rounded-3xl border-2 border-border bg-card p-8 transition-colors",
-                hasPending && "border-destructive/60 bg-destructive/10",
+                hasPending && "border-rose-400/60 bg-rose-50",
               )}
             >
               <div className="mb-3 flex items-center gap-3">
-                <AlertCircle className={cn("h-6 w-6", hasPending ? "text-destructive" : "text-muted-foreground")} />
-                <h3 className="text-lg font-medium text-muted-foreground">Pending Reviews</h3>
+                <AlertCircle className={cn("h-6 w-6", hasPending ? "text-rose-600" : "text-muted-foreground")} />
+                <h3 className="text-lg font-medium text-muted-foreground">Pending Novels</h3>
               </div>
               <p className="text-5xl font-bold">{pendingNovels}</p>
-              {hasPending && <p className="mt-2 text-sm text-destructive">Action required</p>}
+              {hasPending && <p className="mt-2 text-sm text-rose-700">Action required</p>}
             </div>
           </Link>
 
@@ -108,7 +109,7 @@ export default async function AdminDashboardPage() {
         {/* Quick Actions */}
         <section>
           <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Link href={userManagementHref}>
               <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
                 User Management
@@ -117,16 +118,6 @@ export default async function AdminDashboardPage() {
             <Link href="/admin/novels">
               <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
                 Novel Management
-              </Button>
-            </Link>
-            <Link href="/admin/reports">
-              <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
-                Reports
-              </Button>
-            </Link>
-            <Link href="/admin/episodes/pending">
-              <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
-                Episode Approvals
               </Button>
             </Link>
           </div>
@@ -152,6 +143,20 @@ export default async function AdminDashboardPage() {
             <div className="rounded-3xl border-2 border-border bg-card p-6">
               <SuperadminUserManagementTable users={managedUsersForClient} />
             </div>
+          </section>
+        )}
+
+        {["admin", "superadmin"].includes(role) && (
+          <section className="mt-12 rounded-3xl border-2 border-border bg-card p-6">
+            <h3 className="mb-2 text-lg font-semibold text-foreground">Invite an admin</h3>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Share access with trusted staff by creating a dedicated admin account. Admins can review submissions, manage users, and triage incidents.
+            </p>
+            <PrivilegedInviteForm
+              allowedRoles={["admin"]}
+              title="Create admin account"
+              description="Fill out the details below to invite a new administrator."
+            />
           </section>
         )}
       </main>

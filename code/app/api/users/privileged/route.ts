@@ -8,6 +8,7 @@ import { hashPassword } from "@/lib/security"
 
 const ROLE_PERMISSIONS: Record<string, readonly UserRole[]> = {
   developer: ["developer"],
+  admin: ["admin"],
   superadmin: ["reader", "writer", "admin", "developer", "superadmin"],
 }
 

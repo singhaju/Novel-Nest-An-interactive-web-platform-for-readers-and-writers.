@@ -81,7 +81,15 @@ export default async function PendingEpisodeDetailPage(
               </p>
               <Badge variant="outline" className="w-fit">In review</Badge>
             </div>
-            <EpisodeReviewActions episodeId={episode.episode_id} redirectTo="/admin/episodes/pending" />
+            <div className="flex flex-col items-start gap-3 md:items-end">
+              <EpisodeReviewActions episodeId={episode.episode_id} redirectTo="/admin/episodes/pending" />
+              <Link
+                href={`/author/novels/${episode.novel_id}/chapters/${episode.episode_id}`}
+                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-100"
+              >
+                Edit episode
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             <Separator className="my-4" />

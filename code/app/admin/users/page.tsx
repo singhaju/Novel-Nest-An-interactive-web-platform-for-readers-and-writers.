@@ -1,9 +1,13 @@
 import { Header } from "@/components/header"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
+
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { listUsers } from "@/lib/repositories/users"
 import { PrivilegedInviteForm } from "@/components/privileged-invite-form"
+import { AdminUserBanButton } from "@/components/admin-user-ban-button"
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser()
@@ -43,22 +47,44 @@ export default async function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {users.map((profile) => (
-                  <tr key={profile.user_id} className="hover:bg-muted/50">
-                    <td className="px-6 py-4">{profile.username}</td>
-                    <td className="px-6 py-4">
-                      <Badge variant="outline" className="capitalize">
-                        {profile.role.toLowerCase()}
-                      </Badge>
-                    </td>
+                {users.map((profile) => {
+                  const isBanned = Boolean(profile.is_banned)
+                  const normalizedRole = profile.role.toLowerCase()
+                  return (
+                    <tr key={profile.user_id} className="hover:bg-muted/50">
+                      <td className="px-6 py-4">{profile.username}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="capitalize">
+                            {normalizedRole}
+                          </Badge>
+                          {isBanned && <Badge variant="destructive">Banned</Badge>}
+                        </div>
+                      </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {new Date(profile.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4">
-                      <button className="text-sm text-primary hover:underline">View Details</button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full border border-primary/40 text-primary hover:bg-primary/10"
+                          >
+                            <Link href={`/admin/users/${profile.user_id}`}>View details</Link>
+                          </Button>
+                          <AdminUserBanButton
+                            userId={profile.user_id}
+                            username={profile.username}
+                            role={normalizedRole}
+                            isBanned={isBanned}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

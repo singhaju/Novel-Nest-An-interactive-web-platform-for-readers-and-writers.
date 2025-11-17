@@ -32,7 +32,7 @@ export default async function EditEpisodePage(
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["author", "writer", "superadmin"].includes(role)) {
+  if (!session || !["author", "writer", "admin", "superadmin"].includes(role)) {
     redirect("/")
   }
 
@@ -44,7 +44,7 @@ export default async function EditEpisodePage(
     notFound()
   }
 
-  const canManageAll = role === "superadmin"
+  const canManageAll = role === "superadmin" || role === "admin"
 
   const novel = await findNovelById(novelId)
 

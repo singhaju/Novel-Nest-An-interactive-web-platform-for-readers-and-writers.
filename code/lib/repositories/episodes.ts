@@ -187,3 +187,7 @@ export async function listEpisodeIdsForNovel(
 export async function approveAllEpisodesForNovel(novelId: number): Promise<void> {
   await execute("UPDATE episodes SET status = 'APPROVED' WHERE novel_id = ?", [novelId])
 }
+
+export async function denyAllEpisodesForNovel(novelId: number): Promise<void> {
+  await execute("UPDATE episodes SET status = 'DENIAL' WHERE novel_id = ?", [novelId])
+}

@@ -1,14 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { AdminUserBanButton } from "@/components/admin-user-ban-button"
 
 export type ManagedUserRow = {
   id: number
   username: string | null
   role: string
   joinedAt: string
+  isBanned: boolean
 }
 
 type SuperadminUserManagementTableProps = {
@@ -58,7 +62,22 @@ export function SuperadminUserManagementTable({ users }: SuperadminUserManagemen
                       {new Date(profile.joinedAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <button className="text-sm text-primary hover:underline">View Details</button>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="rounded-full border border-primary/40 text-primary hover:bg-primary/10"
+                        >
+                          <Link href={`/admin/users/${profile.id}`}>View details</Link>
+                        </Button>
+                        <AdminUserBanButton
+                          userId={profile.id}
+                          username={profile.username}
+                          role={profile.role}
+                          isBanned={profile.isBanned}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}

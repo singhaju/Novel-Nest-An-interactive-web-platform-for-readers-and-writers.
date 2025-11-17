@@ -86,6 +86,7 @@ export interface AuthorNovelSummaryRow extends RowDataPacket {
   author_id: number
   author_username: string | null
   episode_count: number
+  pending_episode_count: number
 }
 
 export interface PendingNovelRow extends AuthorNovelSummaryRow {
@@ -107,10 +108,20 @@ export interface SearchNovelsResult {
   rows: NovelWithAuthorRow[]
   total: number
 }
+const PUBLIC_NOVEL_STATUSES = ["ONGOING", "COMPLETED", "HIATUS"] as const
+const PUBLIC_NOVEL_STATUS_VALUES: QueryValue[] = [...PUBLIC_NOVEL_STATUSES]
+const PUBLIC_NOVEL_STATUS_PLACEHOLDERS = PUBLIC_NOVEL_STATUSES.map(() => "?").join(",")
 
 function buildWhereClauses(params: SearchNovelsParams): { clause: string; values: QueryValue[] } {
   const whereParts: string[] = []
   const values: QueryValue[] = []
+  const normalizedScope = typeof params.scope === "string" ? params.scope.toLowerCase() : undefined
+
+  const shouldRestrictToPublic = (!params.status || params.status.length === 0) && !["admin", "internal"].includes(normalizedScope ?? "")
+  if (shouldRestrictToPublic) {
+    whereParts.push(`n.status IN (${PUBLIC_NOVEL_STATUS_PLACEHOLDERS})`)
+    values.push(...PUBLIC_NOVEL_STATUS_VALUES)
+  }
 
   if (params.status && params.status.length > 0) {
     const placeholders = params.status.map(() => "?").join(",")
@@ -204,6 +215,7 @@ export interface CreateNovelInput {
 }
 
 export async function createNovel(input: CreateNovelInput): Promise<NovelWithAuthorRow> {
+  await ensureNovelStatusEnum()
   const status = (input.status ?? "PENDING_APPROVAL").toUpperCase()
 
   const result = await execute(
@@ -284,12 +296,50 @@ export async function incrementNovelViews(novelId: number): Promise<void> {
 
 export type NovelUpdateInput = Partial<Pick<NovelRow, "title" | "description" | "cover_image" | "tags" | "status">>
 
+const ALLOWED_STATUSES = new Set(["PENDING_APPROVAL", "ONGOING", "COMPLETED", "HIATUS", "DENIAL"])
+
+let statusEnumEnsured = false
+let ensuringStatusEnum: Promise<void> | null = null
+
+async function ensureNovelStatusEnum(): Promise<void> {
+  if (statusEnumEnsured) return
+  if (!ensuringStatusEnum) {
+    ensuringStatusEnum = (async () => {
+      try {
+        const column = await queryOne<RowDataPacket>("SHOW COLUMNS FROM novels LIKE 'status'")
+        const columnType = typeof column?.Type === "string" ? column.Type.toUpperCase() : ""
+        if (!columnType.includes("'DENIAL'")) {
+          await execute(
+            "ALTER TABLE `novels` MODIFY COLUMN `status` ENUM('ONGOING','COMPLETED','HIATUS','PENDING_APPROVAL','DENIAL') NOT NULL DEFAULT 'PENDING_APPROVAL'",
+            [],
+          )
+        }
+        statusEnumEnsured = true
+      } catch (error) {
+        console.error("Failed to ensure novel status enum", error)
+        throw error
+      } finally {
+        ensuringStatusEnum = null
+      }
+    })()
+  }
+  return ensuringStatusEnum
+}
+
 export async function updateNovel(novelId: number, data: NovelUpdateInput): Promise<NovelRow | null> {
+  await ensureNovelStatusEnum()
   const fields: string[] = []
   const values: QueryValue[] = []
 
   Object.entries(data).forEach(([key, value]) => {
     if (typeof value !== "undefined") {
+      if (key === "status" && typeof value === "string") {
+        const normalized = value.toUpperCase()
+        if (!ALLOWED_STATUSES.has(normalized)) {
+          return
+        }
+        value = normalized
+      }
       fields.push(`${key} = ?`)
       values.push(value as QueryValue)
     }
@@ -368,7 +418,8 @@ export async function listNovelsForManagement(options: { authorId?: number; stat
   const sql = `SELECT n.novel_id, n.title, n.description, n.cover_image, n.status,
                       n.views, n.likes, n.rating, n.last_update, n.author_id,
                       u.username AS author_username,
-                      (SELECT COUNT(*) FROM episodes e WHERE e.novel_id = n.novel_id) AS episode_count
+       (SELECT COUNT(*) FROM episodes e WHERE e.novel_id = n.novel_id) AS episode_count,
+       (SELECT COUNT(*) FROM episodes e WHERE e.novel_id = n.novel_id AND e.status = 'PENDING_APPROVAL') AS pending_episode_count
                FROM novels n
                LEFT JOIN users u ON u.user_id = n.author_id
                ${whereClause}
@@ -487,10 +538,11 @@ async function fallbackTrendingNovels(period: string): Promise<RowDataPacket[]> 
     FROM novels n
     LEFT JOIN users u ON u.user_id = n.author_id
     LEFT JOIN reviews r ON r.novel_id = n.novel_id
+    WHERE n.status IN (${PUBLIC_NOVEL_STATUS_PLACEHOLDERS})
     GROUP BY n.novel_id
     ORDER BY (n.views + n.likes + COALESCE(recent_review_score, 0)) DESC, n.last_update DESC
     LIMIT 50
   `
 
-  return query<RowDataPacket[]>(sql, [])
+  return query<RowDataPacket[]>(sql, [...PUBLIC_NOVEL_STATUS_VALUES])
 }

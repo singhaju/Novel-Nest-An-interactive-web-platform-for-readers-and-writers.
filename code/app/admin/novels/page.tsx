@@ -39,8 +39,17 @@ export default async function AdminNovelsPage() {
                     <span>Rating: {Number(novel.rating ?? 0).toFixed(1)}</span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Link href={`/novel/${novel.novel_id}`} className="text-sm text-primary hover:underline">
+                <div className="flex gap-3">
+                  <Link
+                    href={`/author/novels/${novel.novel_id}`}
+                    className="inline-flex items-center justify-center rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-900 shadow-sm transition-colors hover:bg-rose-100"
+                  >
+                    Edit
+                  </Link>
+                  <Link
+                    href={`/novel/${novel.novel_id}`}
+                    className="inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+                  >
                     View
                   </Link>
                 </div>

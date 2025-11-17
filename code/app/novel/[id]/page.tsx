@@ -31,10 +31,21 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
   }
 
   const userId = session?.user ? Number.parseInt((session.user as any).id) : null
+  const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
   const detail = await getNovelDetail(novelId)
 
   if (!detail) {
+    notFound()
+  }
+
+  const normalizedStatus = (detail.novel.status ?? "").toUpperCase()
+  const isAuthor = userId !== null && detail.novel.author_id === userId
+  const privilegedRoles = new Set(["admin", "superadmin", "developer"])
+  const isPublicStatus = ["ONGOING", "COMPLETED", "HIATUS"].includes(normalizedStatus)
+  const canViewPrivateNovel = isAuthor || privilegedRoles.has(role)
+
+  if (!isPublicStatus && !canViewPrivateNovel) {
     notFound()
   }
 

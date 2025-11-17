@@ -7,7 +7,7 @@ import {
   incrementNovelViews,
   updateNovel as updateNovelRecord,
 } from "@/lib/repositories/novels"
-import { approveAllEpisodesForNovel } from "@/lib/repositories/episodes"
+import { approveAllEpisodesForNovel, denyAllEpisodesForNovel } from "@/lib/repositories/episodes"
 import { DEFAULT_COVER_FOLDER_ID, uploadToGoogleDrive } from "@/lib/google-drive"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 
@@ -15,6 +15,9 @@ import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 // handle both Promise and direct params shape to satisfy Next.js type variations
 export async function GET(request: NextRequest, context: any) {
   try {
+    const session = await auth()
+    const userRole = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
+    const userId = session?.user ? Number.parseInt((session.user as any).id) : null
     // `context.params` may be a Promise in some dev type-checking scenarios
     const rawParams = context?.params instanceof Promise ? await context.params : context?.params;
     const novelId = Number.parseInt(rawParams?.id);
@@ -28,6 +31,15 @@ export async function GET(request: NextRequest, context: any) {
 
     if (!detail) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
+    }
+
+    const novelStatus = (detail.novel.status ?? "").toUpperCase()
+    const privilegedRoles = new Set(["admin", "superadmin", "developer"])
+    const isAuthor = userId !== null && detail.novel.author_id === userId
+    const isPublicStatus = ["ONGOING", "COMPLETED", "HIATUS"].includes(novelStatus)
+
+    if (!isPublicStatus && !isAuthor && !privilegedRoles.has(userRole)) {
+      return NextResponse.json({ error: "Novel not available" }, { status: 404 })
     }
 
     await incrementNovelViews(novelId)
@@ -204,15 +216,15 @@ export async function PATCH(request: NextRequest, context: any) {
 
     const updatedNovel = await updateNovelRecord(novelId, payload)
 
-    if (
-      isPrivileged &&
-      requestedStatus &&
-      ["ONGOING", "COMPLETED", "HIATUS"].includes(requestedStatus)
-    ) {
-      await approveAllEpisodesForNovel(novelId)
+    if (isPrivileged && requestedStatus) {
+      if (["ONGOING", "COMPLETED", "HIATUS"].includes(requestedStatus)) {
+        await approveAllEpisodesForNovel(novelId)
+      } else if (requestedStatus === "DENIAL") {
+        await denyAllEpisodesForNovel(novelId)
+      }
     }
 
-    return NextResponse.json(updatedNovel)
+  return NextResponse.json(updatedNovel)
   } catch (error) {
     if (error instanceof Error && error.message === "STATUS_FORBIDDEN") {
       return NextResponse.json({ error: "Status updates require admin access" }, { status: 403 })

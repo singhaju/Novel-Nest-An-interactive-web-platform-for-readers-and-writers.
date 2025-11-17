@@ -12,6 +12,36 @@ export interface UserRow extends RowDataPacket {
   bio: string | null
   role: string
   created_at: Date
+  is_banned: number
+}
+
+let banColumnEnsured = false
+let ensuringBanColumn: Promise<void> | null = null
+
+async function ensureBanColumn(): Promise<void> {
+  if (banColumnEnsured) {
+    return
+  }
+
+  if (!ensuringBanColumn) {
+    ensuringBanColumn = (async () => {
+      try {
+        const columns = await query<RowDataPacket[]>("SHOW COLUMNS FROM users LIKE 'is_banned'")
+        if (!columns.length) {
+          await execute("ALTER TABLE users ADD COLUMN is_banned TINYINT(1) NOT NULL DEFAULT 0", [])
+        }
+        await execute("UPDATE users SET is_banned = 0 WHERE is_banned IS NULL", [])
+        banColumnEnsured = true
+      } catch (error) {
+        console.error("Failed to ensure is_banned column", error)
+        throw error
+      } finally {
+        ensuringBanColumn = null
+      }
+    })()
+  }
+
+  return ensuringBanColumn
 }
 
 export interface CreateUserInput {
@@ -28,6 +58,7 @@ export async function findUserByEmail(email: string): Promise<UserRow | null> {
 }
 
 export async function findUserById(userId: number): Promise<UserRow | null> {
+  await ensureBanColumn()
   return queryOne<UserRow>("SELECT * FROM users WHERE user_id = ? LIMIT 1", [userId])
 }
 
@@ -84,7 +115,11 @@ export async function updateUserProfile(userId: number, data: Partial<Pick<UserR
 }
 
 export async function listUsers(limit = 50): Promise<UserRow[]> {
-  return query<UserRow[]>("SELECT user_id, username, email, role, created_at, profile_picture FROM users ORDER BY created_at DESC LIMIT ?", [limit])
+  await ensureBanColumn()
+  return query<UserRow[]>(
+    "SELECT user_id, username, email, role, created_at, profile_picture, bio, is_banned FROM users ORDER BY created_at DESC LIMIT ?",
+    [limit],
+  )
 }
 
 export async function countUsers(): Promise<number> {
@@ -94,4 +129,10 @@ export async function countUsers(): Promise<number> {
 
 export async function updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
   await execute("UPDATE users SET password = ? WHERE user_id = ?", [hashedPassword, userId])
+}
+
+export async function setUserBanStatus(userId: number, banned: boolean): Promise<UserRow | null> {
+  await ensureBanColumn()
+  await execute("UPDATE users SET is_banned = ? WHERE user_id = ?", [banned ? 1 : 0, userId])
+  return findUserById(userId)
 }
