@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/actions/auth"
 import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { listUsers } from "@/lib/repositories/users"
+import { PrivilegedInviteForm } from "@/components/privileged-invite-form"
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser()
@@ -19,6 +20,16 @@ export default async function AdminUsersPage() {
 
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-foreground mb-8">User Management</h1>
+
+        {user.role === "superadmin" && (
+          <div className="mb-8 rounded-3xl border-2 border-border bg-card p-6">
+            <PrivilegedInviteForm
+              allowedRoles={["reader", "writer", "admin", "developer", "superadmin"]}
+              title="Create a new account"
+              description="Super Admins can provision any role, including fellow Super Admins."
+            />
+          </div>
+        )}
 
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">

@@ -1,8 +1,15 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
+<<<<<<< Updated upstream
 import { Badge } from "@/components/ui/badge"
+=======
+import { NovelGenreEditor } from "@/components/novel-genre-editor"
+import { NovelCoverEditor } from "@/components/novel-cover-editor"
+>>>>>>> Stashed changes
 import { auth } from "@/lib/auth"
 import { getNovelDetail } from "@/lib/repositories/novels"
+import { parseGenresFromString } from "@/lib/genres"
+import { normalizeCoverImageUrl } from "@/lib/utils"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
@@ -41,6 +48,7 @@ export default async function ManageNovelPage(
 
   const novel = detail.novel
   const episodes = detail.episodes
+<<<<<<< Updated upstream
   const normalizedNovelStatus = (novel.status ?? "").toLowerCase().replace(/\s+/g, "_")
   const defaultEpisodeStatus =
     normalizedNovelStatus === "pending_approval"
@@ -102,6 +110,10 @@ export default async function ManageNovelPage(
       label: "Status unknown",
     },
   }
+=======
+  const initialGenres = parseGenresFromString(novel.tags)
+  const coverUrl = normalizeCoverImageUrl(novel.cover_image ?? undefined) ?? null
+>>>>>>> Stashed changes
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,6 +151,26 @@ export default async function ManageNovelPage(
             <p className="mb-1 text-sm text-muted-foreground">Rating</p>
             <p className="text-2xl font-bold">{Number(novel.rating ?? 0).toFixed(1)}</p>
           </div>
+        </div>
+
+        <div className="mb-8 rounded-3xl border border-border bg-card p-6">
+          <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Cover Image</h2>
+              <p className="text-sm text-muted-foreground">Upload, replace, or remove the novel&apos;s cover.</p>
+            </div>
+          </div>
+          <NovelCoverEditor novelId={novel.novel_id} initialCoverUrl={coverUrl} title={novel.title} />
+        </div>
+
+        <div className="mb-8 rounded-3xl border border-border bg-card p-6">
+          <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Genres</h2>
+              <p className="text-sm text-muted-foreground">Update the categories that best describe this story.</p>
+            </div>
+          </div>
+          <NovelGenreEditor novelId={novel.novel_id} initialGenres={initialGenres} />
         </div>
 
         <div className="mb-6 flex items-center justify-between">

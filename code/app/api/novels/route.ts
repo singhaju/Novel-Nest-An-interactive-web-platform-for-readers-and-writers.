@@ -109,13 +109,15 @@ export async function POST(request: NextRequest) {
     let coverImageUrl: string | undefined
 
     // Upload cover image to Google Drive if provided
-    if (coverImage) {
-      const buffer = Buffer.from(await coverImage.arrayBuffer())
+    const hasCoverImage = coverImage && typeof coverImage === "object" && "size" in coverImage && coverImage.size > 0
+
+    if (hasCoverImage) {
+      const buffer = Buffer.from(await coverImage!.arrayBuffer())
       const rawUrl = await uploadToGoogleDrive({
-        fileName: `cover_${Date.now()}_${coverImage.name}`,
-        mimeType: coverImage.type,
+        fileName: `cover_${Date.now()}_${coverImage!.name || "upload"}`,
+        mimeType: coverImage!.type || "application/octet-stream",
         fileContent: buffer,
-  folderId: DEFAULT_COVER_FOLDER_ID,
+        folderId: DEFAULT_COVER_FOLDER_ID,
       })
       coverImageUrl = normalizeCoverImageUrl(rawUrl) || rawUrl
     }
