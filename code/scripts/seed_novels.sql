@@ -164,7 +164,17 @@ VALUES
 (2003, 'The Hobbit', 'The adventure of hobbit Bilbo Baggins, who is swept into an epic quest to reclaim treasure guarded by a dragon in Middle-earth.', 'https://drive.google.com/file/d/1g2fjK-t7-hcGQpvgkN9kj6lWfK9WvQ8W/view?usp=drive_link', '["fantasy", "adventure", "classic"]', 'COMPLETED', NOW(), 320000, 25000, 4.99, 103),
 (2004, 'To Kill a Mockingbird', 'Told through the eyes of Scout Finch, this novel explores the irrationality of adult attitudes towards race and class in the American South.', 'https://drive.google.com/file/d/1jJv9S3jY1OHtOghyO7YYLrTWFkWaetTJ/view?usp=drive_link', '["classic", "fiction", "southern-gothic"]', 'COMPLETED', NOW(), 180450, 15300, 4.96, 104),
 (2005, 'Nineteen Eighty-Four', 'A chilling dystopian novel set in Airstrip One, where the totalitarian Party controls every aspect of human existence through surveillance and propaganda.', 'https://drive.google.com/file/d/1W66cUGJ2y6P2m5BKBDPhKrMFBL1IMn7Y/view?usp=drive_link', '["dystopian", "sci-fi", "classic"]', 'COMPLETED', NOW(), 255000, 21000, 4.97, 105)
-ON DUPLICATE KEY UPDATE novel_id = novel_id;
+ON DUPLICATE KEY UPDATE
+  title = VALUES(title),
+  description = VALUES(description),
+  cover_image = VALUES(cover_image),
+  tags = VALUES(tags),
+  status = VALUES(status),
+  last_update = VALUES(last_update),
+  views = VALUES(views),
+  likes = VALUES(likes),
+  rating = VALUES(rating),
+  author_id = VALUES(author_id);
 
 -- ============================================================================
 -- 4. INSERT EPISODES (Chapters)
