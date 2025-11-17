@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { listWishlistByUser, toggleWishlistEntry } from "@/lib/repositories/wishlist"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
+import { canUseReaderFeatures, getSessionRole } from "@/lib/permissions"
 
 // GET /api/wishlist - Get user's wishlist
 export async function GET(request: NextRequest) {
@@ -10,6 +11,11 @@ export async function GET(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const role = getSessionRole(session)
+    if (!canUseReaderFeatures(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const userId = Number.parseInt((session.user as any).id)
@@ -51,6 +57,11 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const role = getSessionRole(session)
+    if (!canUseReaderFeatures(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = await request.json()

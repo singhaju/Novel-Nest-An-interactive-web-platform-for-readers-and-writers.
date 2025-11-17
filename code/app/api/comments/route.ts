@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { createComment, listCommentsForEpisode } from "@/lib/repositories/comments"
+import { canUseReaderFeatures, getSessionRole } from "@/lib/permissions"
 
 // GET /api/comments - Get comments for an episode
 export async function GET(request: NextRequest) {
@@ -76,6 +77,11 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const role = getSessionRole(session)
+    if (!canUseReaderFeatures(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = await request.json()

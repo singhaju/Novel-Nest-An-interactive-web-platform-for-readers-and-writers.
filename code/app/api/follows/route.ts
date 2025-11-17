@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { isFollowingAuthor, toggleFollow } from "@/lib/repositories/follows"
+import { canUseReaderFeatures, getSessionRole } from "@/lib/permissions"
 
 // GET /api/follows?authorId=123 - Check follow status
 export async function GET(request: NextRequest) {
@@ -40,6 +41,11 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const role = getSessionRole(session)
+    if (!canUseReaderFeatures(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const body = await request.json()

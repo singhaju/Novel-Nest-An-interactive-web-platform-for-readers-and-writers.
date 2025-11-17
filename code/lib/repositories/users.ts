@@ -1,7 +1,6 @@
 import type { RowDataPacket } from "mysql2/promise"
 import { execute, query, queryOne } from "../db"
-
-export type UserRole = "reader" | "writer" | "admin" | "developer" | "superadmin"
+import type { UserRole } from "@/lib/types/database"
 
 export interface UserRow extends RowDataPacket {
   user_id: number
@@ -94,4 +93,9 @@ export async function countUsers(): Promise<number> {
 
 export async function updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
   await execute("UPDATE users SET password = ? WHERE user_id = ?", [hashedPassword, userId])
+}
+
+export async function updateUserRole(userId: number, role: UserRole): Promise<UserRow | null> {
+  await execute("UPDATE users SET role = ? WHERE user_id = ?", [role.toUpperCase(), userId])
+  return findUserById(userId)
 }

@@ -6,6 +6,7 @@ import GoogleProvider from "next-auth/providers/google"
 import { hashPassword, verifyPassword } from "./security"
 import { findUserByEmail, findUserById, updateUserPassword } from "./repositories/users"
 import { normalizeProfileImageUrl } from "./utils"
+import { ensureUserRole } from "@/lib/permissions"
 
 // ✅ Define configuration as an object
 export const authConfig = {
@@ -41,7 +42,7 @@ export const authConfig = {
           await updateUserPassword(user.user_id, upgradedHash)
         }
 
-        const normalizedRole = typeof user.role === "string" ? user.role.toLowerCase() : "reader"
+        const normalizedRole = ensureUserRole(user.role)
 
         return {
           id: user.user_id.toString(),
@@ -63,19 +64,19 @@ export const authConfig = {
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id
-        token.role = typeof user.role === "string" ? user.role.toLowerCase() : token.role ?? "reader"
+        token.role = ensureUserRole((user as any).role)
   const normalizedProfile = normalizeProfileImageUrl((user as any).profile_picture)
   token.profile_picture = normalizedProfile ?? token.profile_picture
       }
-      if (token.role && typeof token.role === "string") {
-        token.role = token.role.toLowerCase()
+      if (token.role) {
+        token.role = ensureUserRole(token.role)
       }
       return token
     },
     async session({ session, token }: any) {
       if (session.user) {
         session.user.id = token.id
-        session.user.role = typeof token.role === "string" ? token.role.toLowerCase() : "reader"
+        session.user.role = ensureUserRole(token.role)
 
         const userId = typeof token.id === "string" ? Number.parseInt(token.id, 10) : token.id
 
@@ -83,6 +84,9 @@ export const authConfig = {
           const dbUser = await findUserById(userId)
 
           if (dbUser) {
+            const normalizedRole = ensureUserRole(dbUser.role)
+            session.user.role = normalizedRole
+            token.role = normalizedRole
             session.user.username = dbUser.username
             session.user.email = dbUser.email
             const normalizedProfile = normalizeProfileImageUrl(dbUser.profile_picture ?? undefined)

@@ -4,11 +4,11 @@ import {
   deleteNovel as deleteNovelRecord,
   findNovelById,
   getNovelDetail,
-  incrementNovelViews,
   updateNovel as updateNovelRecord,
 } from "@/lib/repositories/novels"
 import { approveAllEpisodesForNovel } from "@/lib/repositories/episodes"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
+import { getSessionRole, hasMinimumRole } from "@/lib/permissions"
 
 // GET /api/novels/[id] - Get a single novel
 // handle both Promise and direct params shape to satisfy Next.js type variations
@@ -28,8 +28,6 @@ export async function GET(request: NextRequest, context: any) {
     if (!detail) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
-
-    await incrementNovelViews(novelId)
 
     const normalizedNovel = {
       ...detail.novel,
@@ -92,9 +90,12 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
 
-    const userRoleRaw = (session.user as any).role
     const userId = Number.parseInt((session.user as any).id)
+    const role = getSessionRole(session)
+    const isOwner = novel.author_id === userId
+    const canModerate = hasMinimumRole(role, "admin")
 
+    if (!isOwner && !canModerate) {
     const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
     const privilegedRoles = ["admin", "developer", "superadmin"]
     const isPrivileged = privilegedRoles.includes(userRole)
@@ -158,12 +159,12 @@ export async function DELETE(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Novel not found" }, { status: 404 })
     }
 
-    const userRoleRaw = (session.user as any).role
     const userId = Number.parseInt((session.user as any).id)
+    const role = getSessionRole(session)
+    const isOwner = novel.author_id === userId
+    const canModerate = hasMinimumRole(role, "admin")
 
-    const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
-
-  if (novel.author_id !== userId && !["admin", "developer", "superadmin"].includes(userRole)) {
+    if (!isOwner && !canModerate) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

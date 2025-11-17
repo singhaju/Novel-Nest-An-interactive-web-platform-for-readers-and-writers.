@@ -40,6 +40,43 @@ export async function createReviewWithUser(data: {
   return review
 }
 
+export async function findReviewByUserAndNovel(novelId: number, userId: number): Promise<ReviewWithUserRow | null> {
+  return queryOne<ReviewWithUserRow>(
+    `SELECT r.*, u.username as user_username, u.profile_picture as user_profile_picture
+     FROM reviews r
+     LEFT JOIN users u ON u.user_id = r.user_id
+     WHERE r.novel_id = ? AND r.user_id = ?`,
+    [novelId, userId],
+  )
+}
+
+export async function getReviewById(reviewId: number): Promise<ReviewWithUserRow | null> {
+  return queryOne<ReviewWithUserRow>(
+    `SELECT r.*, u.username as user_username, u.profile_picture as user_profile_picture
+     FROM reviews r
+     LEFT JOIN users u ON u.user_id = r.user_id
+     WHERE r.review_id = ?`,
+    [reviewId],
+  )
+}
+
+export async function updateReviewWithUser(reviewId: number, data: { rating: number; comment?: string | null }): Promise<ReviewWithUserRow> {
+  await execute(
+    `UPDATE reviews
+     SET rating = ?, comment = ?, created_at = CURRENT_TIMESTAMP
+     WHERE review_id = ?`,
+    [data.rating, data.comment ?? null, reviewId],
+  )
+
+  const updated = await getReviewById(reviewId)
+
+  if (!updated) {
+    throw new Error("Failed to load review after update")
+  }
+
+  return updated
+}
+
 export async function getAverageRatingForNovel(novelId: number): Promise<number> {
   const row = await queryOne<RowDataPacket>("SELECT AVG(rating) as avgRating FROM reviews WHERE novel_id = ?", [novelId])
   return Number(row?.avgRating ?? 0)

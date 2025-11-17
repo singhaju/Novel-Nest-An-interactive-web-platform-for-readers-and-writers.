@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { createNovel as createNovelRecord, searchNovels } from "@/lib/repositories/novels"
 import { DEFAULT_COVER_FOLDER_ID, uploadToGoogleDrive } from "@/lib/google-drive"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
+import { getSessionRole, hasMinimumRole } from "@/lib/permissions"
 
 // GET /api/novels - Get all novels with filters
 export async function GET(request: NextRequest) {
@@ -81,8 +82,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const role = typeof (session.user as any).role === "string" ? (session.user as any).role.toLowerCase() : "reader"
-    if (!["writer", "admin", "developer", "superadmin"].includes(role)) {
+    const role = getSessionRole(session)
+    if (!hasMinimumRole(role, "writer")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

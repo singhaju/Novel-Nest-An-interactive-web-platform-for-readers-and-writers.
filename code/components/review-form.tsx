@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
 
@@ -9,21 +9,36 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
+interface ExistingReview {
+  review_id: number
+  rating: number
+  comment?: string | null
+}
+
 interface ReviewFormProps {
   novelId: number
   className?: string
+  initialReview?: ExistingReview | null
 }
 
-export function ReviewForm({ novelId, className }: ReviewFormProps) {
+export function ReviewForm({ novelId, className, initialReview }: ReviewFormProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const [rating, setRating] = useState(0)
+  const [rating, setRating] = useState(initialReview?.rating ?? 0)
   const [hoverRating, setHoverRating] = useState(0)
-  const [comment, setComment] = useState("")
+  const [comment, setComment] = useState(initialReview?.comment ?? "")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [existingReview, setExistingReview] = useState<ExistingReview | null>(initialReview ?? null)
+
+  useEffect(() => {
+    setExistingReview(initialReview ?? null)
+    setRating(initialReview?.rating ?? 0)
+    setComment(initialReview?.comment ?? "")
+  }, [initialReview])
 
   const displayRating = hoverRating || rating
+  const hasReview = Boolean(existingReview)
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault()
@@ -38,14 +53,19 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
     setError(null)
 
     try {
-      await apiClient.createReview({
+      const response = await apiClient.createReview({
         novelId,
         rating,
         comment: comment.trim() || undefined,
       })
 
-      setComment("")
-      setRating(0)
+      setExistingReview({
+        review_id: response.review_id,
+        rating: response.rating,
+        comment: response.comment ?? null,
+      })
+      setComment(response.comment ?? "")
+      setRating(response.rating)
       setHoverRating(0)
       setIsOpen(false)
       router.refresh()
@@ -59,13 +79,35 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
 
   return (
     <div className={cn("space-y-4", className)}>
+      {hasReview && !isOpen ? (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
+          <p className="font-semibold">Your review</p>
+          <p className="text-muted-foreground">
+            Rated {existingReview?.rating}/5
+            {existingReview?.comment ? ` • "${existingReview.comment}"` : ""}
+          </p>
+        </div>
+      ) : null}
       <Button
         type="button"
         size="lg"
         className="w-full rounded-2xl border border-primary/30 bg-primary text-primary-foreground font-semibold shadow-sm transition hover:border-primary hover:bg-primary/90 hover:shadow-lg"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() =>
+          setIsOpen((open) => {
+            const next = !open
+            if (next && existingReview) {
+              setRating(existingReview.rating)
+              setComment(existingReview.comment ?? "")
+            }
+            if (!next) {
+              setError(null)
+              setHoverRating(0)
+            }
+            return next
+          })
+        }
       >
-        {isOpen ? "Cancel" : "Post a review"}
+        {isOpen ? "Cancel" : hasReview ? "Edit your review" : "Post a review"}
       </Button>
 
       {isOpen ? (
@@ -119,7 +161,7 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
               disabled={submitting}
               className="w-full rounded-2xl border border-primary/30 bg-primary text-primary-foreground font-semibold shadow-sm transition hover:border-primary hover:bg-primary/90 hover:shadow-lg sm:w-auto"
             >
-              {submitting ? "Submitting..." : "Submit review"}
+              {submitting ? "Submitting..." : hasReview ? "Update review" : "Submit review"}
             </Button>
             <Button
               type="button"
@@ -129,6 +171,14 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
               onClick={() => {
                 setIsOpen(false)
                 setError(null)
+                if (existingReview) {
+                  setRating(existingReview.rating)
+                  setComment(existingReview.comment ?? "")
+                } else {
+                  setRating(0)
+                  setComment("")
+                }
+                setHoverRating(0)
               }}
             >
               Cancel

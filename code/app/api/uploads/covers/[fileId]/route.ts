@@ -10,8 +10,30 @@ const CACHE_HEADERS = {
   "Cache-Control": "public, max-age=86400, immutable",
 }
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ fileId?: string }> }) {
-  const { fileId: rawParam } = await params
+type CoverParams = { fileId?: string }
+type MaybePromise<T> = T | Promise<T>
+
+async function unwrapParams(possible: MaybePromise<CoverParams> | null | undefined): Promise<CoverParams> {
+  if (!possible) {
+    return {}
+  }
+
+  if (typeof (possible as Promise<CoverParams>).then === "function") {
+    return possible as Promise<CoverParams>
+  }
+
+  return possible as CoverParams
+}
+
+function extractFileIdFromPath(request: NextRequest): string | undefined {
+  const url = new URL(request.url)
+  const segments = url.pathname.split("/").filter(Boolean)
+  return segments.at(-1)
+}
+
+export async function GET(request: NextRequest, context: { params?: MaybePromise<CoverParams> }) {
+  const resolvedParams = await unwrapParams(context?.params)
+  const rawParam = resolvedParams.fileId ?? extractFileIdFromPath(request)
   const decoded = typeof rawParam === "string" ? decodeURIComponent(rawParam) : ""
   const driveFileId = extractDriveFileIdFromUrl(decoded) ?? decoded
 
@@ -22,9 +44,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ fileId
 
   try {
     const { stream, mimeType } = await downloadDriveFile(driveFileId)
-    const webStream = Readable.toWeb(stream)
+    const webStream = Readable.toWeb(stream) as unknown as ReadableStream
 
-    return new NextResponse(webStream as any, {
+    return new NextResponse(webStream, {
       headers: {
         "Content-Type": mimeType ?? "application/octet-stream",
         ...CACHE_HEADERS,
