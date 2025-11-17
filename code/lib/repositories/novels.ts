@@ -137,7 +137,7 @@ function buildWhereClauses(params: SearchNovelsParams): { clause: string; values
       }
 
       const prefixValue = `${q}%`
-      const containsValue = `%${q}%`
+      const containsValue = q.length >= 2 ? `%${q}%` : prefixValue
 
       if (params.scope === "suggest") {
         addLike("LOWER(n.title) LIKE ?", prefixValue)
@@ -146,13 +146,8 @@ function buildWhereClauses(params: SearchNovelsParams): { clause: string; values
           addLike("LOWER(n.title) LIKE ?", containsValue)
           addLike("LOWER(u.username) LIKE ?", containsValue)
         }
-        if (q.length >= 4) {
-          addLike("LOWER(n.tags) LIKE ?", containsValue)
-        }
       } else {
         addLike("LOWER(n.title) LIKE ?", containsValue)
-        addLike("LOWER(n.tags) LIKE ?", containsValue)
-        addLike("LOWER(n.description) LIKE ?", containsValue)
         addLike("LOWER(u.username) LIKE ?", containsValue)
       }
 
@@ -427,10 +422,74 @@ export async function getNovelSubmissionDetail(novelId: number): Promise<NovelSu
 
 export async function getTrendingNovels(period: string): Promise<RowDataPacket[]> {
   const pool = getPool()
-  const [resultSets] = await pool.query<RowDataPacket[][] | RowDataPacket[]>("CALL GetTrendingNovels(?)", [period])
-  if (Array.isArray(resultSets)) {
-    const flattened = (resultSets as unknown[]).filter(Array.isArray) as RowDataPacket[][]
-    return flattened.flat()
+
+  try {
+    const [resultSets] = await pool.query<RowDataPacket[][] | RowDataPacket[]>("CALL GetTrendingNovels(?)", [period])
+    if (Array.isArray(resultSets)) {
+      const flattened = (resultSets as unknown[]).filter(Array.isArray) as RowDataPacket[][]
+      return flattened.flat()
+    }
+    return []
+  } catch (error: any) {
+    if (isMissingProcedureError(error)) {
+      // Stored procedure not installed yet; fall back to a direct query so the UI keeps working.
+      return fallbackTrendingNovels(period)
+    }
+    throw error
   }
-  return []
+}
+
+function isMissingProcedureError(error: any): boolean {
+  if (!error) return false
+  if (typeof error.errno === "number" && error.errno === 1305) return true
+  if (typeof error.code === "string" && ["ER_SP_DOES_NOT_EXIST", "ER_PROCEDURE_NOT_EXIST"].includes(error.code)) {
+    return true
+  }
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : ""
+  return message.includes("procedure") && message.includes("does not exist")
+}
+
+async function fallbackTrendingNovels(period: string): Promise<RowDataPacket[]> {
+  const safePeriod = ["daily", "weekly", "monthly", "all"].includes(period) ? period : "weekly"
+
+  const recentCase = (() => {
+    switch (safePeriod) {
+      case "daily":
+        return "CASE WHEN r.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY) THEN 1 ELSE 0 END"
+      case "weekly":
+        return "CASE WHEN r.created_at >= DATE_SUB(NOW(), INTERVAL 1 WEEK) THEN 1 ELSE 0 END"
+      case "monthly":
+        return "CASE WHEN r.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH) THEN 1 ELSE 0 END"
+      default:
+        return "CASE WHEN r.review_id IS NOT NULL THEN 1 ELSE 0 END"
+    }
+  })()
+
+  const sql = `
+    SELECT
+      n.novel_id,
+      n.title,
+      n.description,
+      n.cover_image,
+      n.tags,
+      n.status,
+      n.views,
+      n.likes,
+      n.rating,
+      n.created_at,
+      n.last_update,
+      n.author_id,
+      u.username AS author_username,
+      u.profile_picture AS author_profile_picture,
+      COUNT(r.review_id) AS total_reviews,
+      SUM(${recentCase}) AS recent_review_score
+    FROM novels n
+    LEFT JOIN users u ON u.user_id = n.author_id
+    LEFT JOIN reviews r ON r.novel_id = n.novel_id
+    GROUP BY n.novel_id
+    ORDER BY (n.views + n.likes + COALESCE(recent_review_score, 0)) DESC, n.last_update DESC
+    LIMIT 50
+  `
+
+  return query<RowDataPacket[]>(sql, [])
 }
