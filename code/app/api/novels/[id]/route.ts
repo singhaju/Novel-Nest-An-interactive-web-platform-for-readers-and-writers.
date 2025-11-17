@@ -4,7 +4,6 @@ import {
   deleteNovel as deleteNovelRecord,
   findNovelById,
   getNovelDetail,
-  incrementNovelViews,
   updateNovel as updateNovelRecord,
 } from "@/lib/repositories/novels"
 import { approveAllEpisodesForNovel, denyAllEpisodesForNovel } from "@/lib/repositories/episodes"
@@ -41,8 +40,6 @@ export async function GET(request: NextRequest, context: any) {
     if (!isPublicStatus && !isAuthor && !privilegedRoles.has(userRole)) {
       return NextResponse.json({ error: "Novel not available" }, { status: 404 })
     }
-
-    await incrementNovelViews(novelId)
 
     const approvedEpisodes = detail.episodes.filter(
       (episode) => (episode.status ?? "").toUpperCase() === "APPROVED",

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createUser, findUserByEmailOrUsername } from "@/lib/repositories/users"
 import { hashPassword } from "@/lib/security"
 import { recordUserCreationToSheet } from "@/lib/google-sheets"
+import { PASSWORD_REQUIREMENTS, evaluatePassword, isPasswordStrong } from "@/lib/password-policy"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +20,15 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    if (!isPasswordStrong(normalizedPassword)) {
+      const checks = evaluatePassword(normalizedPassword)
+      const unmet = PASSWORD_REQUIREMENTS.filter((requirement) => !checks[requirement.key]).map(
+        (requirement) => requirement.label.toLowerCase(),
+      )
+      const message = `Password must include: ${unmet.join(", ")}`
+      return NextResponse.json({ error: message }, { status: 400 })
     }
 
     // Check if user already exists

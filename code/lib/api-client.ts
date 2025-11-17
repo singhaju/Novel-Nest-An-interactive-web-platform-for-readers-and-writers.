@@ -119,6 +119,12 @@ export const apiClient = {
     return res.json()
   },
 
+  async incrementNovelView(id: number) {
+    const res = await fetch(`${baseUrl}/api/novels/${id}/views`, { method: "POST" })
+    if (!res.ok) throw new Error("Failed to increment novel view")
+    return res.json()
+  },
+
   async getTrendingNovels(params?: { timePeriod?: "daily" | "weekly" | "monthly" | "all" }) {
     const searchParams = new URLSearchParams()
     if (params?.timePeriod) {

@@ -7,6 +7,8 @@ import { findEpisodeWithDetails, listEpisodeIdsForNovel } from "@/lib/repositori
 import { upsertReadingProgress } from "@/lib/repositories/reading-progress"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { Suspense } from "react"
+import { EpisodeViewTracker } from "@/components/episode-view-tracker"
 
 async function loadContent(source: string | null) {
   if (!source) {
@@ -88,6 +90,10 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
             <p className="whitespace-pre-wrap leading-relaxed text-foreground">{content}</p>
           </div>
         </div>
+
+        <Suspense fallback={null}>
+          <EpisodeViewTracker novelId={episode.novel_id} episodeId={episode.episode_id} />
+        </Suspense>
 
         <div className="mb-8 flex gap-4">
           {previousEpisodeId ? (

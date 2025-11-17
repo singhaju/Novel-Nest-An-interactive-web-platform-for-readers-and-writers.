@@ -11,7 +11,7 @@ import { ShareButton } from "@/components/share-button"
 import { ReviewForm } from "@/components/review-form"
 import { auth } from "@/lib/auth"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
-import { getNovelDetail, incrementNovelViews } from "@/lib/repositories/novels"
+import { getNovelDetail } from "@/lib/repositories/novels"
 import { hasUserLikedNovel } from "@/lib/repositories/likes"
 import { isNovelInWishlist } from "@/lib/repositories/wishlist"
 
@@ -48,8 +48,6 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
   if (!isPublicStatus && !canViewPrivateNovel) {
     notFound()
   }
-
-  await incrementNovelViews(novelId)
 
   const novel = {
     ...detail.novel,

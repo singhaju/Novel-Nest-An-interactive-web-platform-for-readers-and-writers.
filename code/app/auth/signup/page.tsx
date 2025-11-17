@@ -1,18 +1,24 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PASSWORD_REQUIREMENTS, evaluatePassword, isPasswordStrong } from "@/lib/password-policy"
+import { CheckCircle2, Circle } from "lucide-react"
 
 export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedRole, setSelectedRole] = useState<"reader" | "writer">("reader")
+  const [passwordValue, setPasswordValue] = useState("")
   const router = useRouter()
+
+  const passwordChecks = useMemo(() => evaluatePassword(passwordValue), [passwordValue])
+  const passwordMeetsAll = useMemo(() => Object.values(passwordChecks).every(Boolean), [passwordChecks])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -28,6 +34,16 @@ export default function SignupPage() {
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
+      setLoading(false)
+      return
+    }
+
+    if (!isPasswordStrong(password)) {
+      const checks = evaluatePassword(password)
+      const unmet = PASSWORD_REQUIREMENTS.filter((requirement) => !checks[requirement.key]).map(
+        (requirement) => requirement.label.toLowerCase(),
+      )
+      setError(`Password must include: ${unmet.join(", ")}`)
       setLoading(false)
       return
     }
@@ -129,8 +145,31 @@ export default function SignupPage() {
                   type="password"
                   placeholder="Enter your password"
                   required
+                  value={passwordValue}
+                  onChange={(event) => setPasswordValue(event.target.value)}
                   className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
                 />
+                <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm">
+                  <p className="mb-2 font-semibold text-foreground">Password must include:</p>
+                  <ul className="space-y-2">
+                    {PASSWORD_REQUIREMENTS.map((requirement) => {
+                      const met = passwordChecks[requirement.key]
+                      return (
+                        <li key={requirement.key} className="flex items-center gap-2 text-sm">
+                          {met ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          )}
+                          <span className={met ? "text-foreground" : "text-muted-foreground"}>{requirement.label}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {!passwordMeetsAll && passwordValue.length > 0 && (
+                    <p className="mt-3 text-xs text-amber-600">Your password still needs to meet all requirements above.</p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
