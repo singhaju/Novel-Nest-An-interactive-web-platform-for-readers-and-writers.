@@ -10,12 +10,12 @@ export default async function AuthorNovelsPage() {
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["writer", "developer", "superadmin"].includes(role)) {
+  if (!session || !["author", "writer", "superadmin"].includes(role)) {
     redirect("/")
   }
 
   const authorId = Number.parseInt((session.user as any).id)
-  const canManageAll = ["developer", "superadmin"].includes(role)
+  const canManageAll = role === "superadmin"
 
   const novels = await listNovelsForManagement(canManageAll ? {} : { authorId })
 

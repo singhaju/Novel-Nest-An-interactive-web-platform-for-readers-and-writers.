@@ -32,7 +32,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuItem asChild>
           <Link href="/profile">Profile</Link>
         </DropdownMenuItem>
-        {["writer", "author", "developer", "superadmin"].includes(role) && (
+        {["writer", "author", "superadmin"].includes(role) && (
           <DropdownMenuItem asChild>
             <Link href="/author">Author Dashboard</Link>
           </DropdownMenuItem>

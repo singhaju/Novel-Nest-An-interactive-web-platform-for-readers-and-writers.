@@ -1,22 +1,16 @@
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { auth } from "@/lib/auth"
-import { cn } from "@/lib/utils"
-import { redirect } from "next/navigation"
-import Link from "next/link"
-<<<<<<< Updated upstream
-import { Users, BookOpen, AlertCircle, NotebookPen } from "lucide-react"
-import { getEpisodeReviewCounts, getNovelCounts, getUserCount } from "@/lib/repositories/stats"
-=======
-import { Users, BookOpen, AlertCircle } from "lucide-react"
-import { getNovelCounts, getUserCount } from "@/lib/repositories/stats"
-import { listUsers } from "@/lib/repositories/users"
 import { PrivilegedInviteForm } from "@/components/privileged-invite-form"
 import { SuperadminUserManagementTable } from "@/components/superadmin-user-management-table"
->>>>>>> Stashed changes
+import { auth } from "@/lib/auth"
+import { getEpisodeReviewCounts, getNovelCounts, getUserCount } from "@/lib/repositories/stats"
+import { listUsers } from "@/lib/repositories/users"
+import { cn } from "@/lib/utils"
+import { Users, BookOpen, AlertCircle, NotebookPen } from "lucide-react"
+import Link from "next/link"
+import { redirect } from "next/navigation"
 
 export default async function AdminDashboardPage() {
-  // ✅ 1. Protect admin page using new helper
   const session = await auth()
 
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
@@ -24,28 +18,22 @@ export default async function AdminDashboardPage() {
     redirect("/")
   }
 
-<<<<<<< Updated upstream
-  const [userCount, novelCounts, episodeCounts] = await Promise.all([
+  const [userCount, novelCounts, episodeCounts, managedUsers] = await Promise.all([
     getUserCount(),
     getNovelCounts(),
     getEpisodeReviewCounts(),
-=======
-  const [userCount, novelCounts, managedUsers] = await Promise.all([
-    getUserCount(),
-    getNovelCounts(),
     role === "superadmin" ? listUsers(500) : Promise.resolve([]),
->>>>>>> Stashed changes
   ])
+
   const totalUsers = userCount
   const totalNovels = novelCounts.total
   const pendingNovels = novelCounts.pending
   const pendingEpisodes = episodeCounts.pending
 
   const hasPending = pendingNovels > 0
-<<<<<<< Updated upstream
   const hasPendingEpisodes = pendingEpisodes > 0
-=======
   const userManagementHref = role === "superadmin" ? "/admin#user-management" : "/admin/users"
+
   const managedUsersForClient = role === "superadmin"
     ? managedUsers.map((profile) => ({
         id: profile.user_id,
@@ -54,9 +42,7 @@ export default async function AdminDashboardPage() {
         joinedAt: profile.created_at.toISOString(),
       }))
     : []
->>>>>>> Stashed changes
 
-  // ✅ 5. Page UI
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -65,7 +51,7 @@ export default async function AdminDashboardPage() {
         <h1 className="text-3xl font-bold text-foreground mb-8">Admin Dashboard</h1>
 
         {/* Stats Cards */}
-  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
           {/* Total Users */}
           <div className="rounded-3xl border-2 border-border bg-card p-8">
             <div className="flex items-center gap-3 mb-3">
@@ -122,13 +108,8 @@ export default async function AdminDashboardPage() {
         {/* Quick Actions */}
         <section>
           <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
-<<<<<<< Updated upstream
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link href="/admin/users">
-=======
-          <div className="grid gap-4 md:grid-cols-3">
             <Link href={userManagementHref}>
->>>>>>> Stashed changes
               <Button variant="outline" className="w-full h-20 rounded-3xl text-lg bg-transparent">
                 User Management
               </Button>

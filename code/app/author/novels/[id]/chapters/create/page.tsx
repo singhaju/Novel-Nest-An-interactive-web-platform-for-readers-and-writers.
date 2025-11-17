@@ -14,7 +14,7 @@ export default async function CreateChapterPage(
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["writer", "developer", "superadmin"].includes(role)) {
+  if (!session || !["author", "writer", "superadmin"].includes(role)) {
     redirect("/")
   }
 
@@ -25,7 +25,7 @@ export default async function CreateChapterPage(
     notFound()
   }
 
-  const canManageAll = ["developer", "superadmin"].includes(role)
+  const canManageAll = role === "superadmin"
 
   const novel = await findNovelById(novelId)
 
@@ -41,8 +41,8 @@ export default async function CreateChapterPage(
       <Header />
 
       <main className="container mx-auto max-w-3xl px-4 py-8">
-        <h1 className="mb-2 text-3xl font-bold text-foreground">Add New Episode</h1>
-  <p className="mb-8 text-muted-foreground">{novel.title}</p>
+          <h1 className="mb-2 text-3xl font-bold text-foreground">Add New Episode</h1>
+          <p className="mb-8 text-muted-foreground">{novel.title}</p>
         <CreateChapterForm novelId={resolvedParams.id} chapterNumber={nextChapterNumber || 1} />
       </main>
     </div>

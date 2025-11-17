@@ -8,7 +8,7 @@ export default async function CreateNovelPage() {
 
   if (
     !user ||
-  !["writer", "author", "admin", "developer", "superadmin"].includes((user.role || "reader").toLowerCase())
+    !["writer", "author", "admin", "superadmin"].includes((user.role || "reader").toLowerCase())
   ) {
     redirect("/")
   }

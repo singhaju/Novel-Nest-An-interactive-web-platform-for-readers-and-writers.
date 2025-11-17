@@ -12,7 +12,7 @@ export default async function AuthorDashboardPage() {
   const session = await auth()
 
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
-  if (!session || !["writer", "developer", "superadmin"].includes(role)) {
+  if (!session || !["author", "writer", "superadmin"].includes(role)) {
     redirect("/")
   }
 

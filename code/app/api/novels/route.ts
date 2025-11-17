@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     const role = typeof (session.user as any).role === "string" ? (session.user as any).role.toLowerCase() : "reader"
-    if (!["writer", "admin", "developer", "superadmin"].includes(role)) {
+    if (!["writer", "author", "admin", "superadmin"].includes(role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

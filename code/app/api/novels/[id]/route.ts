@@ -98,7 +98,11 @@ export async function PATCH(request: NextRequest, context: any) {
     const userId = Number.parseInt((session.user as any).id)
 
     const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
-    const privilegedRoles = ["admin", "developer", "superadmin"]
+    const authoringRoles = ["author", "writer", "admin", "superadmin"]
+    if (!authoringRoles.includes(userRole)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+    const privilegedRoles = ["admin", "superadmin"]
     const isPrivileged = privilegedRoles.includes(userRole)
 
     if (novel.author_id !== userId && !isPrivileged) {
@@ -246,8 +250,12 @@ export async function DELETE(request: NextRequest, context: any) {
     const userId = Number.parseInt((session.user as any).id)
 
     const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
+    const authoringRoles = ["author", "writer", "admin", "superadmin"]
+    if (!authoringRoles.includes(userRole)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
 
-  if (novel.author_id !== userId && !["admin", "developer", "superadmin"].includes(userRole)) {
+    if (novel.author_id !== userId && !["admin", "superadmin"].includes(userRole)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

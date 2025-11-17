@@ -21,7 +21,7 @@ export default async function ManageNovelPage(
   const session = await auth()
   const role = typeof session?.user?.role === "string" ? session.user.role.toLowerCase() : "reader"
 
-  if (!session || !["writer", "developer", "superadmin"].includes(role)) {
+  if (!session || !["author", "writer", "superadmin"].includes(role)) {
     redirect("/")
   }
 
@@ -32,7 +32,7 @@ export default async function ManageNovelPage(
     notFound()
   }
 
-  const canManageAll = ["developer", "superadmin"].includes(role)
+  const canManageAll = role === "superadmin"
 
   const detail = await getNovelDetail(novelId)
   if (!detail) {

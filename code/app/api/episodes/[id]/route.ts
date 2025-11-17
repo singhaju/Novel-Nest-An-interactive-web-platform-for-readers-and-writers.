@@ -101,10 +101,14 @@ export async function PATCH(request: NextRequest, context: any) {
     const userId = Number.parseInt((session.user as any).id)
     const roleRaw = (session.user as any).role
     const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : "reader"
-    const privilegedRoles = ["admin", "developer", "superadmin"]
+    const authoringRoles = ["author", "writer", "admin", "superadmin"]
+    if (!authoringRoles.includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+    const privilegedRoles = ["admin", "superadmin"]
     const isPrivileged = privilegedRoles.includes(role)
 
-    if (episode.author_id !== userId && !privilegedRoles.includes(role)) {
+    if (episode.author_id !== userId && !isPrivileged) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -198,7 +202,11 @@ export async function DELETE(request: NextRequest, context: any) {
     const userId = Number.parseInt((session.user as any).id)
     const roleRaw = (session.user as any).role
     const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : "reader"
-    const privilegedRoles = ["admin", "developer", "superadmin"]
+    const authoringRoles = ["author", "writer", "admin", "superadmin"]
+    if (!authoringRoles.includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+    const privilegedRoles = ["admin", "superadmin"]
 
     if (episode.author_id !== userId && !privilegedRoles.includes(role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
