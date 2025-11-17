@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
 
@@ -11,19 +11,36 @@ import { cn } from "@/lib/utils"
 
 interface ReviewFormProps {
   novelId: number
+  initialReview?: {
+    review_id: number
+    rating: number
+    comment?: string | null
+  }
   className?: string
 }
 
-export function ReviewForm({ novelId, className }: ReviewFormProps) {
+export function ReviewForm({ novelId, initialReview, className }: ReviewFormProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const [rating, setRating] = useState(0)
+  const [rating, setRating] = useState(initialReview?.rating ?? 0)
   const [hoverRating, setHoverRating] = useState(0)
-  const [comment, setComment] = useState("")
+  const [comment, setComment] = useState(initialReview?.comment ?? "")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isEditing = Boolean(initialReview)
 
   const displayRating = hoverRating || rating
+
+  useEffect(() => {
+    if (initialReview) {
+      setRating(initialReview.rating)
+      setComment(initialReview.comment ?? "")
+    } else {
+      setRating(0)
+      setComment("")
+    }
+    setHoverRating(0)
+  }, [initialReview?.review_id, initialReview?.rating, initialReview?.comment])
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault()
@@ -38,15 +55,26 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
     setError(null)
 
     try {
-      await apiClient.createReview({
-        novelId,
-        rating,
-        comment: comment.trim() || undefined,
-      })
+      const trimmedComment = comment.trim()
+      const normalizedComment = trimmedComment.length > 0 ? trimmedComment : null
 
-      setComment("")
-      setRating(0)
-      setHoverRating(0)
+      if (isEditing && initialReview) {
+        await apiClient.updateReview(initialReview.review_id, {
+          rating,
+          comment: normalizedComment,
+        })
+      } else {
+        await apiClient.createReview({
+          novelId,
+          rating,
+          comment: normalizedComment ?? undefined,
+        })
+
+        setComment("")
+        setRating(0)
+        setHoverRating(0)
+      }
+
       setIsOpen(false)
       router.refresh()
     } catch (submitError) {
@@ -65,13 +93,15 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
         className="w-full rounded-2xl border border-primary/30 bg-primary text-primary-foreground font-semibold shadow-sm transition hover:border-primary hover:bg-primary/90 hover:shadow-lg"
         onClick={() => setIsOpen((open) => !open)}
       >
-        {isOpen ? "Cancel" : "Post a review"}
+        {isOpen ? "Cancel" : isEditing ? "Edit your review" : "Post a review"}
       </Button>
 
       {isOpen ? (
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-background p-4">
           <div>
-            <p className="text-sm font-medium text-foreground">Your rating</p>
+            <p className="text-sm font-medium text-foreground">
+              {isEditing ? "Update your rating" : "Your rating"}
+            </p>
             <div className="mt-2 flex items-center gap-1">
               {Array.from({ length: 5 }, (_, index) => {
                 const starValue = index + 1
@@ -100,7 +130,7 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
 
           <div>
             <label htmlFor="review-comment" className="text-sm font-medium text-foreground">
-              Share your thoughts (optional)
+              {isEditing ? "Update your thoughts" : "Share your thoughts (optional)"}
             </label>
             <Textarea
               id="review-comment"
@@ -119,7 +149,7 @@ export function ReviewForm({ novelId, className }: ReviewFormProps) {
               disabled={submitting}
               className="w-full rounded-2xl border border-primary/30 bg-primary text-primary-foreground font-semibold shadow-sm transition hover:border-primary hover:bg-primary/90 hover:shadow-lg sm:w-auto"
             >
-              {submitting ? "Submitting..." : "Submit review"}
+              {submitting ? (isEditing ? "Saving..." : "Submitting...") : isEditing ? "Save changes" : "Submit review"}
             </Button>
             <Button
               type="button"

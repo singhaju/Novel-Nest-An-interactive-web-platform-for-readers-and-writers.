@@ -1,10 +1,10 @@
 // /code/lib/auth.ts
 import NextAuth from "next-auth"
 import { getServerSession } from "next-auth"
-import CredentialsProvider,  { type CredentialsConfig } from "next-auth/providers/credentials"
+import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import { hashPassword, verifyPassword } from "./security"
-import { findUserByEmail, findUserById, updateUserPassword } from "./repositories/users"
+import { findUserById, findUserByUsernameOrEmail, updateUserPassword } from "./repositories/users"
 import { normalizeProfileImageUrl } from "./utils"
 
 // ✅ Define configuration as an object
@@ -15,16 +15,22 @@ export const authConfig = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       // @ts-expect-error - NextAuth type inference bug with CredentialsProvider
   async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.identifier || !credentials?.password) {
           throw new Error("Invalid credentials")
         }
 
-        const user = await findUserByEmail(credentials.email)
+        const identifier = credentials.identifier.trim()
+
+        if (!identifier) {
+          throw new Error("Invalid credentials")
+        }
+
+        const user = await findUserByUsernameOrEmail(identifier)
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials")

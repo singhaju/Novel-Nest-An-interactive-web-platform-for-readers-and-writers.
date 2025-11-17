@@ -21,12 +21,18 @@ export default function LoginPage() {
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
+    const identifier = (formData.get("identifier") as string)?.trim() || ""
     const password = formData.get("password") as string
+
+    if (!identifier) {
+      setError("Email or username is required")
+      setLoading(false)
+      return
+    }
 
     try {
       const result = await signIn("credentials", {
-        email,
+        identifier,
         password,
         redirect: false,
       })
@@ -81,14 +87,14 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground font-medium">
-                  Email
+                <Label htmlFor="identifier" className="text-foreground font-medium">
+                  Email or Username
                 </Label>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
+                  placeholder="Enter your email or username"
                   required
                   className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
                 />

@@ -25,13 +25,7 @@ export async function createReviewWithUser(data: {
   )
 
   const reviewId = Number(result.insertId)
-  const review = await queryOne<ReviewWithUserRow>(
-    `SELECT r.*, u.username as user_username, u.profile_picture as user_profile_picture
-     FROM reviews r
-     LEFT JOIN users u ON u.user_id = r.user_id
-     WHERE r.review_id = ?`,
-    [reviewId],
-  )
+  const review = await findReviewById(reviewId)
 
   if (!review) {
     throw new Error("Failed to load review after insert")
@@ -47,4 +41,53 @@ export async function getAverageRatingForNovel(novelId: number): Promise<number>
 
 export async function updateNovelRating(novelId: number, rating: number): Promise<void> {
   await execute("UPDATE novels SET rating = ? WHERE novel_id = ?", [rating, novelId])
+}
+
+export async function findReviewByNovelAndUser(novelId: number, userId: number): Promise<ReviewWithUserRow | null> {
+  return queryOne<ReviewWithUserRow>(
+    `SELECT r.*, u.username as user_username, u.profile_picture as user_profile_picture
+     FROM reviews r
+     LEFT JOIN users u ON u.user_id = r.user_id
+     WHERE r.novel_id = ? AND r.user_id = ?
+     ORDER BY r.created_at DESC
+     LIMIT 1`,
+    [novelId, userId],
+  )
+}
+
+export async function findReviewById(reviewId: number): Promise<ReviewWithUserRow | null> {
+  return queryOne<ReviewWithUserRow>(
+    `SELECT r.*, u.username as user_username, u.profile_picture as user_profile_picture
+     FROM reviews r
+     LEFT JOIN users u ON u.user_id = r.user_id
+     WHERE r.review_id = ?
+     LIMIT 1`,
+    [reviewId],
+  )
+}
+
+export async function updateReview(
+  reviewId: number,
+  data: { rating?: number; comment?: string | null },
+): Promise<ReviewWithUserRow | null> {
+  const fields: string[] = []
+  const values: (number | string | null)[] = []
+
+  if (typeof data.rating === "number") {
+    fields.push("rating = ?")
+    values.push(data.rating)
+  }
+
+  if (typeof data.comment !== "undefined") {
+    fields.push("comment = ?")
+    values.push(data.comment ?? null)
+  }
+
+  if (fields.length === 0) {
+    return findReviewById(reviewId)
+  }
+
+  values.push(reviewId)
+  await execute(`UPDATE reviews SET ${fields.join(", ")} WHERE review_id = ?`, values)
+  return findReviewById(reviewId)
 }

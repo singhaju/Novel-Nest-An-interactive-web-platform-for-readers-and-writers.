@@ -7,6 +7,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { username, email, password, role = "READER" } = body
+    const normalizedUsername = typeof username === "string" ? username.trim() : ""
+    const normalizedEmail = typeof email === "string" ? email.trim() : ""
+    const normalizedPassword = typeof password === "string" ? password : ""
     const allowedRoles = ["READER", "WRITER"] as const
     const normalizedRole = typeof role === "string" ? role.toUpperCase() : "READER"
     const assignedRole = allowedRoles.includes(normalizedRole as (typeof allowedRoles)[number])
@@ -14,23 +17,23 @@ export async function POST(request: NextRequest) {
       : "READER"
 
     // Validate input
-    if (!username || !email || !password) {
+    if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     // Check if user already exists
-  const existingUser = await findUserByEmailOrUsername(email, username)
+    const existingUser = await findUserByEmailOrUsername(normalizedEmail, normalizedUsername)
 
     if (existingUser) {
       return NextResponse.json({ error: "User already exists" }, { status: 400 })
     }
 
     // Hash password
-    const hashedPassword = hashPassword(password)
+    const hashedPassword = hashPassword(normalizedPassword)
 
     const user = await createUser({
-      username,
-      email,
+      username: normalizedUsername,
+      email: normalizedEmail,
       password: hashedPassword,
       role: assignedRole.toLowerCase() as any,
     })

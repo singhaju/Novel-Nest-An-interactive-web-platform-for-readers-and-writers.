@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { createReviewWithUser, getAverageRatingForNovel, updateNovelRating } from "@/lib/repositories/reviews"
+import {
+  createReviewWithUser,
+  findReviewByNovelAndUser,
+  getAverageRatingForNovel,
+  updateNovelRating,
+} from "@/lib/repositories/reviews"
 
 // POST /api/reviews - Create a review
 export async function POST(request: NextRequest) {
@@ -24,6 +29,12 @@ export async function POST(request: NextRequest) {
 
     const userId = Number.parseInt((session.user as any).id)
 
+    const existingReview = await findReviewByNovelAndUser(novelId, userId)
+
+    if (existingReview) {
+      return NextResponse.json({ error: "You already reviewed this novel. Edit your review instead." }, { status: 409 })
+    }
+
     const review = await createReviewWithUser({
       novel_id: novelId,
       user_id: userId,
@@ -34,14 +45,17 @@ export async function POST(request: NextRequest) {
     const avgRating = await getAverageRatingForNovel(novelId)
     await updateNovelRating(novelId, avgRating)
 
-    return NextResponse.json({
-      ...review,
-      user: {
-        user_id: review.user_id,
-        username: review.user_username,
-        profile_picture: review.user_profile_picture,
+    return NextResponse.json(
+      {
+        ...review,
+        user: {
+          user_id: review.user_id,
+          username: review.user_username,
+          profile_picture: review.user_profile_picture,
+        },
       },
-    }, { status: 201 })
+      { status: 201 },
+    )
   } catch (error) {
     console.error("Error creating review:", error)
     return NextResponse.json({ error: "Failed to create review" }, { status: 500 })

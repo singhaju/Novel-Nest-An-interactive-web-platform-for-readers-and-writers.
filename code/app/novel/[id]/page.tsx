@@ -65,6 +65,8 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
     })),
   }
 
+  const userReview = userId ? novel.reviews.find((review) => review.user_id === userId) : null
+
   const [hasLiked, hasWishlisted] = await Promise.all([
     userId ? hasUserLikedNovel(userId, novelId) : Promise.resolve(false),
     userId ? isNovelInWishlist(userId, novelId) : Promise.resolve(false),
@@ -211,7 +213,7 @@ export default async function NovelDetailPage(props: { params: PageParams } | { 
             <div className="rounded-3xl border border-border bg-card p-6">
               <h2 className="mb-4 text-xl font-semibold">Reviews</h2>
               {session?.user ? (
-                <ReviewForm novelId={novel.novel_id} className="mb-4" />
+                <ReviewForm novelId={novel.novel_id} initialReview={userReview ?? undefined} className="mb-4" />
               ) : (
                 <p className="mb-4 text-sm text-muted-foreground">
                   <Link href="/auth/login" className="font-medium text-primary hover:underline">

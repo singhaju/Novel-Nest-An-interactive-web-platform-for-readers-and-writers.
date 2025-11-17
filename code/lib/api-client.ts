@@ -170,7 +170,25 @@ export const apiClient = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
-    if (!res.ok) throw new Error("Failed to create review")
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}))
+      throw new Error(payload.error || "Failed to create review")
+    }
+    return res.json()
+  },
+
+  async updateReview(reviewId: number, data: { rating?: number; comment?: string | null }) {
+    const res = await fetch(`${baseUrl}/api/reviews/${reviewId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}))
+      throw new Error(payload.error || "Failed to update review")
+    }
+
     return res.json()
   },
 

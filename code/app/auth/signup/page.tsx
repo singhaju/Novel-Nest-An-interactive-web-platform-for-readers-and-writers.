@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<"reader" | "writer">("reader")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -23,6 +24,7 @@ export default function SignupPage() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const confirmPassword = formData.get("confirmPassword") as string
+    const role = (formData.get("role") as string) ?? selectedRole
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
@@ -30,11 +32,13 @@ export default function SignupPage() {
       return
     }
 
+    const normalizedRole = role === "writer" ? "WRITER" : "READER"
+
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, role: normalizedRole }),
       })
 
       const data = await response.json()
@@ -141,6 +145,38 @@ export default function SignupPage() {
                   required
                   className="rounded-2xl bg-background px-6 py-6 text-center placeholder:text-muted-foreground"
                 />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-foreground font-medium">Choose your role</Label>
+                <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Select account role">
+                  {["reader", "writer"].map((roleOption) => {
+                    const isActive = selectedRole === roleOption
+                    const label = roleOption === "reader" ? "Reader" : "Writer"
+                    const description =
+                      roleOption === "reader" ? "Discover and follow novels" : "Publish your own stories"
+                    return (
+                      <button
+                        key={roleOption}
+                        type="button"
+                        onClick={() => setSelectedRole(roleOption as "reader" | "writer")}
+                        role="radio"
+                        aria-checked={isActive}
+                        className={`rounded-2xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                          isActive
+                            ? "border-transparent bg-foreground text-background shadow-lg ring-offset-background"
+                            : "border-border bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{label}</div>
+                        <div className={`text-xs ${isActive ? "text-background/80" : "text-muted-foreground"}`}>
+                          {description}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <input type="hidden" name="role" value={selectedRole} />
               </div>
 
               {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
