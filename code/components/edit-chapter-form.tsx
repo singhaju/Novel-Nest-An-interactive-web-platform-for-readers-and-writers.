@@ -113,6 +113,10 @@ export function EditChapterForm({
         />
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        Saving changes resubmits this episode for review. It will remain hidden until an admin approves it again.
+      </p>
+
       {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
       <div className="flex flex-wrap gap-4">

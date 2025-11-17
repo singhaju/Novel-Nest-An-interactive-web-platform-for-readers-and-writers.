@@ -6,6 +6,7 @@ import {
   getNovelDetail,
   updateNovel as updateNovelRecord,
 } from "@/lib/repositories/novels"
+import { approveAllEpisodesForNovel } from "@/lib/repositories/episodes"
 import { normalizeCoverImageUrl, normalizeProfileImageUrl } from "@/lib/utils"
 import { getSessionRole, hasMinimumRole } from "@/lib/permissions"
 
@@ -95,6 +96,11 @@ export async function PATCH(request: NextRequest, context: any) {
     const canModerate = hasMinimumRole(role, "admin")
 
     if (!isOwner && !canModerate) {
+    const userRole = typeof userRoleRaw === "string" ? userRoleRaw.toLowerCase() : "reader"
+    const privilegedRoles = ["admin", "developer", "superadmin"]
+    const isPrivileged = privilegedRoles.includes(userRole)
+
+    if (novel.author_id !== userId && !isPrivileged) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -103,9 +109,24 @@ export async function PATCH(request: NextRequest, context: any) {
     if (typeof body.description === "string") payload.description = body.description
     if (typeof body.cover_image === "string") payload.cover_image = body.cover_image
     if (typeof body.tags === "string") payload.tags = body.tags
-    if (typeof body.status === "string") payload.status = body.status.toUpperCase()
+
+    const requestedStatus = typeof body.status === "string" ? body.status.toUpperCase() : undefined
+    if (requestedStatus) {
+      if (!isPrivileged) {
+        return NextResponse.json({ error: "Status updates require admin access" }, { status: 403 })
+      }
+      payload.status = requestedStatus
+    }
 
     const updatedNovel = await updateNovelRecord(novelId, payload)
+
+    if (
+      isPrivileged &&
+      requestedStatus &&
+      ["ONGOING", "COMPLETED", "HIATUS"].includes(requestedStatus)
+    ) {
+      await approveAllEpisodesForNovel(novelId)
+    }
 
     return NextResponse.json(updatedNovel)
   } catch (error) {

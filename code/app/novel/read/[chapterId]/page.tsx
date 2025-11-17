@@ -66,6 +66,7 @@ export default async function ReadChapterPage(props: { params: PageParams } | { 
         <ViewTracker novelId={episode.novel_id} />
         <div className="mb-8 text-center">
           <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel_title ?? "Untitled"}</p>
+          <p className="mb-2 text-sm text-muted-foreground">Story: {episode.novel_title ?? "Unknown"}</p>
           <h1 className="mb-2 text-4xl font-bold text-foreground">Episode {safeIndex + 1}</h1>
           <p className="text-xl text-muted-foreground">Author {episode.author_username ?? "Unknown"}</p>
         </div>

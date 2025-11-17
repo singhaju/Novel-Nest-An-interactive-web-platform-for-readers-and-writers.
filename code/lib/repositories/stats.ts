@@ -10,6 +10,11 @@ export interface NovelCountsRow extends RowDataPacket {
   pending: number
 }
 
+export interface EpisodeCountsRow extends RowDataPacket {
+  total: number
+  pending: number
+}
+
 export async function getNovelCounts(): Promise<{ total: number; pending: number }> {
   const row = await queryOne<NovelCountsRow>(
     `SELECT
@@ -30,6 +35,19 @@ export async function getUserCount(): Promise<number> {
 export async function getEpisodeCount(): Promise<number> {
   const row = await queryOne<CountRow>("SELECT COUNT(*) AS total FROM episodes")
   return Number(row?.total ?? 0)
+}
+
+export async function getEpisodeReviewCounts(): Promise<{ total: number; pending: number }> {
+  const row = await queryOne<EpisodeCountsRow>(
+    `SELECT
+        (SELECT COUNT(*) FROM episodes) AS total,
+        (SELECT COUNT(*) FROM episodes WHERE status = 'PENDING_APPROVAL') AS pending`,
+  )
+
+  return {
+    total: Number(row?.total ?? 0),
+    pending: Number(row?.pending ?? 0),
+  }
 }
 
 export async function getCommentCount(): Promise<number> {
