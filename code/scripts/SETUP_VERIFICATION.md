@@ -2,11 +2,11 @@
 
 ## Image Integration
 
-- [x] **Dune.webp** → `/code/public/dune-cover.webp` (32 KB)
-- [x] **Nineteen Eighty-Four.jpg** → `/code/public/nineteen-eighty-four-cover.jpg` (121 KB)
-- [x] **Pride and Prejudice.jpg** → `/code/public/pride-prejudice-cover.jpg` (80 KB)
-- [x] **The Hobbit.jpg** → `/code/public/hobbit-cover.jpg` (379 KB)
-- [x] **To Kill a Mockingbird.jpg** → `/code/public/mockingbird-cover.jpg` (2 MB)
+- [x] **Dune.webp** → `/code/public/pictures/dune.webp`
+- [x] **Nineteen Eighty-Four.jpg** → `/code/public/pictures/nineteen-eighty-four.jpg`
+- [x] **Pride and Prejudice.jpg** → `/code/public/pictures/pride-and-prejudice.jpg`
+- [x] **The Hobbit.jpg** → `/code/public/pictures/the-hobbit.jpg`
+- [x] **To Kill a Mockingbird.jpg** → `/code/public/pictures/to-kill-a-mockingbird.jpg`
 
 ## Database Schema
 
@@ -94,11 +94,11 @@ SELECT title, cover_image FROM novels;
 
 **Expected Output:**
 ```
-Pride and Prejudice      | /pride-prejudice-cover.jpg
-Dune                     | /dune-cover.webp
-The Hobbit               | /hobbit-cover.jpg
-To Kill a Mockingbird    | /mockingbird-cover.jpg
-Nineteen Eighty-Four     | /nineteen-eighty-four-cover.jpg
+Pride and Prejudice      | /pictures/pride-and-prejudice.jpg
+Dune                     | /pictures/dune.webp
+The Hobbit               | /pictures/the-hobbit.jpg
+To Kill a Mockingbird    | /pictures/to-kill-a-mockingbird.jpg
+Nineteen Eighty-Four     | /pictures/nineteen-eighty-four.jpg
 ```
 
 ### View Novel with Episodes
@@ -119,7 +119,7 @@ GROUP BY n.novel_id;
 
 ```bash
 # Verify images exist
-ls -la code/public/*.{jpg,webp}
+ls -la code/public/pictures
 
 # Verify seed completed
 npm run seed

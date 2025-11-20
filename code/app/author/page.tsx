@@ -180,7 +180,7 @@ export default async function AuthorDashboardPage() {
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-card p-12 text-center">
-              <p className="mb-4 text-muted-foreground">You haven't created any novels yet</p>
+              <p className="mb-4 text-muted-foreground">You haven&apos;t created any novels yet</p>
               <Link href="/author/novels/create">
                 <Button>Create Your First Novel</Button>
               </Link>

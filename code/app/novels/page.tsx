@@ -162,7 +162,7 @@ export default async function NovelsPage({ searchParams }: NovelsPageProps) {
                 <NovelGrid novels={novels} />
               ) : (
                 <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
-                  We couldn't find any novels yet. Check back soon.
+                  We couldn&apos;t find any novels yet. Check back soon.
                 </div>
               )}
             </section>
@@ -186,7 +186,7 @@ export default async function NovelsPage({ searchParams }: NovelsPageProps) {
               })
             ) : (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
-                We couldn't find any tagged collections just yet. Publish or tag a story to get started.
+                We couldn&apos;t find any tagged collections just yet. Publish or tag a story to get started.
               </div>
             )}
           </div>

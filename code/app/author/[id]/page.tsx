@@ -73,7 +73,7 @@ export default async function AuthorPage(props: { params: PageParams } | { param
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {novels.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">This author hasn't published any novels yet.</div>
+                <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">This author hasn&apos;t published any novels yet.</div>
               ) : (
                 novels.map((novel) => (
                   <Link
