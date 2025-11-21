@@ -31,7 +31,7 @@ export default async function PendingEpisodesPage() {
 
         {episodes.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-12 text-center">
-            <p className="text-muted-foreground">No episodes awaiting review. You're all caught up.</p>
+            <p className="text-muted-foreground">No episodes awaiting review. You&apos;re all caught up.</p>
           </div>
         ) : (
           <div className="space-y-4">

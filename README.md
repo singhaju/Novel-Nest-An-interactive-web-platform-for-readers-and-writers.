@@ -1,6 +1,6 @@
 # Novel Nest
 
-**Novel Nest** is an interactive web platform designed for reading, writing, and sharing novels online. It serves as a digital library and creative hub where users can discover stories across genres, support their favorite authors, and build a personal reading journey. Writers can publish their work, engage with readers, and earn rewards through the platform's coin-based system. (Mainly focus on data base project)
+**Novel Nest** is an interactive web platform designed for reading, writing, and sharing novels online. It serves as a digital library and creative hub where users can discover stories across genres, support their favorite authors, and build a personal reading journey. Writers can publish their work, and engage with readers (Mainly focus on data base project)
 
 This project is developed for the CSS326 course.
 
@@ -8,8 +8,8 @@ This project is developed for the CSS326 course.
 
 - **Singha Junchan** - 6622770350 : Project Manager (PM), Product Owner (PO) and Full stack developer
 - **Chanon Sipiyarak** - 6622770319 : Front-end Developer (UI/UX)
-- **Kanade Areepoonsiri** - 6622770442: Backend Developer (API, Database)
-- **Johnny Shakespeare Ramseyer** - 6622772448 : Backend Developer (API, Database)
+- **Kanade Areepoonsiri** - 6622770442: Backend Developer 
+- **Johnny Shakespeare Ramseyer** - 6622772448 : Backend Developer (Database)
 
 ## Key Features
 
@@ -19,20 +19,17 @@ Novel Nest is designed with a role-based architecture to cater to the specific n
 - **Discover Novels:** Browse a vast library of serialized novels across different genres and tags.
 - **Personalized Experience:** Get novel recommendations, create a personal wishlist, and follow favorite authors.
 - **Engage with the Community:** Leave reviews, comment on episodes, and interact with other readers.
-- **Support Writers:** Purchase coins to unlock premium chapters and support content creators.
 - **Seamless Reading:** Enjoy a customizable reading interface and keep track of your reading progress.
 
 ### For Writers:
 - **Publish & Manage Content:** An intuitive dashboard to create, publish, and manage novels and episodes.
-- **Monetize Your Work:** Set prices for premium (locked) content and earn coins from your readers.
-- **Track Your Performance:** Monitor key metrics like total views, earnings, and reader engagement.
+- **Track Your Performance:** Monitor key metrics like total views, and reader engagement.
 - **Interact with Readers:** View and respond to comments on your stories.
 
 ### For Admins:
-- **Platform Oversight:** A comprehensive dashboard to monitor site-wide statistics, including active users and revenue trends.
+- **Platform Oversight:** A comprehensive dashboard to monitor site-wide statistics, including active users.
 - **User Management:** Verify new writers, manage user roles, and suspend accounts if necessary.
 - **Content Moderation:** Review and approve/reject novels and reported comments to ensure a safe environment.
-- **Financial Management:** Handle financial tasks like approving writer payouts.
 
 ### For Developers:
 - **System Maintenance:** A restricted-access page to monitor server health, check security logs, and manage core system features.
@@ -59,7 +56,6 @@ The platform is built on a robust MySQL database designed to handle the complex 
 - **Novels:** Contains all the core information about each novel.
 - **Episodes:** Stores the content for each individual chapter or episode of a novel.
 - **Reviews & Comments:** Manages user-submitted ratings and comments.
-- **Transactions:** Logs all real-money transactions for coin purchases.
 - **Bridge Tables:** Manages the many-to-many relationships such as `Novel_Authors`, `User_Wishlist`, and `User_Follows`.
 
 The database also utilizes **triggers** for actions like automatically recalculating a novel's average rating and **stored procedures** for functionalities like fetching trending novels.
@@ -79,4 +75,3 @@ The database also utilizes **triggers** for actions like automatically recalcula
 | **Week 16** | Dec 2 | No Lab (Final Exam) |
 
 ---
-*This README was generated with assistance from an AI.*

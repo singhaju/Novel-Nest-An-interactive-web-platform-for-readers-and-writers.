@@ -3,15 +3,15 @@
 ## ✅ Completed Tasks
 
 ### 1. **Copied Novel Cover Images to Public Folder**
-All 5 novel cover images have been copied to `/code/public/`:
+All 5 novel cover images have been copied to `/code/public/pictures/`:
 
 | Novel | Original File | Public Path | Size |
 |-------|---|---|---|
-| Pride and Prejudice | `Pride and Prejudice.jpg` | `/pride-prejudice-cover.jpg` | 80 KB |
-| Dune | `Dune.webp` | `/dune-cover.webp` | 32 KB |
-| The Hobbit | `The Hobbit.jpg` | `/hobbit-cover.jpg` | 379 KB |
-| To Kill a Mockingbird | `To Kill a Mockingbird.jpg` | `/mockingbird-cover.jpg` | 2 MB |
-| Nineteen Eighty-Four | `Nineteen Eighty-Four.jpg` | `/nineteen-eighty-four-cover.jpg` | 121 KB |
+| Pride and Prejudice | `Pride and Prejudice.jpg` | `/pictures/pride-and-prejudice.jpg` | 80 KB |
+| Dune | `Dune.webp` | `/pictures/dune.webp` | 32 KB |
+| The Hobbit | `The Hobbit.jpg` | `/pictures/the-hobbit.jpg` | 379 KB |
+| To Kill a Mockingbird | `To Kill a Mockingbird.jpg` | `/pictures/to-kill-a-mockingbird.jpg` | 2 MB |
+| Nineteen Eighty-Four | `Nineteen Eighty-Four.jpg` | `/pictures/nineteen-eighty-four.jpg` | 121 KB |
 
 ### 2. **Updated Database Seed Script**
 Modified `code/scripts/seed_novels.sql` to use **local image paths** instead of Google Drive URLs:
@@ -19,11 +19,11 @@ Modified `code/scripts/seed_novels.sql` to use **local image paths** instead of 
 ```sql
 INSERT INTO `novels` (`novel_id`, `title`, `description`, `cover_image`, ...)
 VALUES
-(2001, 'Pride and Prejudice', '...', '/pride-prejudice-cover.jpg', ...),
-(2002, 'Dune', '...', '/dune-cover.webp', ...),
-(2003, 'The Hobbit', '...', '/hobbit-cover.jpg', ...),
-(2004, 'To Kill a Mockingbird', '...', '/mockingbird-cover.jpg', ...),
-(2005, 'Nineteen Eighty-Four', '...', '/nineteen-eighty-four-cover.jpg', ...)
+(2001, 'Pride and Prejudice', '...', '/pictures/pride-and-prejudice.jpg', ...),
+(2002, 'Dune', '...', '/pictures/dune.webp', ...),
+(2003, 'The Hobbit', '...', '/pictures/the-hobbit.jpg', ...),
+(2004, 'To Kill a Mockingbird', '...', '/pictures/to-kill-a-mockingbird.jpg', ...),
+(2005, 'Nineteen Eighty-Four', '...', '/pictures/nineteen-eighty-four.jpg', ...)
 ```
 
 ### 3. **Fixed Schema Compatibility Issues**
@@ -115,13 +115,13 @@ Ran `npm run seed` and populated the database with:
 ## 🔧 Technical Details
 
 ### Image Serving
-- Images are served from `/public/` directory
+- Images are served from `/public/pictures/` directory
 - Next.js automatically optimizes and caches images
 - Paths in database match actual filenames in `/code/public/`
 
 ### Database Columns
 ```sql
-novels.cover_image = '/filename.jpg'  -- Relative path to public folder
+novels.cover_image = '/pictures/filename.ext'  -- Relative path under public/pictures
 ```
 
 ### Image Format Support
@@ -179,7 +179,7 @@ The application is ready to:
 |------|----------|
 | Seed Script | `code/scripts/seed_novels.sql` |
 | Seed Executor | `code/scripts/seed.js` |
-| Cover Images | `code/public/*.{jpg,webp}` |
+| Cover Images | `code/public/pictures/*.{jpg,webp}` |
 | Database Schema Reference | `code/scripts/DATABASE_SCHEMA_REFERENCE.md` |
 | Database Config | `code/.env` (DATABASE_URL) |
 | Dev Server | Running on localhost:3000 |
@@ -189,7 +189,7 @@ The application is ready to:
 ## 🐛 Troubleshooting
 
 ### Images not showing?
-1. Check if images exist: `code/public/` folder
+1. Check if images exist: `code/public/pictures/` folder
 2. Verify database seed completed successfully
 3. Clear browser cache (Ctrl+Shift+Delete)
 4. Restart dev server: `npm run dev`
@@ -208,7 +208,7 @@ npm run seed
 ### Cover image path issues?
 The seed script uses relative paths (`/filename.jpg`) which Next.js serves from the `/public` directory. If you see broken image links:
 - Verify filenames match exactly (case-sensitive on Linux/Mac)
-- Ensure image files are in `code/public/`
+- Ensure image files are in `code/public/pictures/`
 - Restart the dev server
 
 ---

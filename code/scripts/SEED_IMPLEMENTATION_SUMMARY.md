@@ -150,7 +150,7 @@ When you run `npm run seed`:
 1. ✅ Reads `.env` and connects to MySQL
 2. ✅ Creates all tables (if they don't exist)
 3. ✅ Inserts 7 users with hashed passwords
-4. ✅ Inserts 5 novels with metadata + Google Drive URLs
+4. ✅ Inserts 5 novels with metadata + `/pictures/...` cover paths
 5. ✅ Inserts 10 episodes (chapters with content)
 6. ✅ Inserts 10 reviews from readers
 7. ✅ Inserts 10 comments with threading
@@ -159,12 +159,12 @@ When you run `npm run seed`:
 
 ## Database URLs
 
-The seed uses Google Drive URLs for:
-- **`cover_image`** — Novel covers (placeholder format: `https://drive.google.com/uc?id=...`)
-- **`profile_picture`** — User avatars (real Pexels URLs)
-- **`content`** — Episode content (placeholder format: `https://docs.google.com/document/d/...`)
+The seed uses the following asset sources:
+- **`cover_image`** — Local static files under `/pictures/*.jpg|webp` (already bundled inside `public/pictures`)
+- **`profile_picture`** — Remote Pexels URLs (same as before)
+- **`content`** — Placeholder Google Docs links (`https://docs.google.com/document/d/...`)
 
-You can update these after seeding if you have actual Google Drive links.
+You can swap these after seeding if you have real Google Drive links or additional local assets.
 
 ## SQL Seed Details
 
