@@ -1,6 +1,6 @@
-# Novel Nest Data Blueprint (November 2025 Refresh)
+# Novel Nest Data Blueprint
 
-This document consolidates the refreshed user flows, physical MySQL design, and entity attributes for the Novel Nest platform as requested for the CSS326 deliverable. It captures how the current codebase (Next.js App Router + mysql2) interacts with the database, the bundled `/public/pictures` static assets (for seeded novels), and Google Drive uploads without requiring application code changes.
+This document consolidates the refreshed user flows, physical MySQL design, and entity attributes for the Novel Nest platform. It captures how the current codebase (Next.js App Router + mysql2) interacts with the database, the bundled `/public/pictures` static assets (for seeded novels), and Google Drive uploads without requiring application code changes.
 
 ---
 
@@ -179,5 +179,4 @@ Each entity inherits default `created_at` timestamps (and `updated_at` where app
 ## 5. Deliverable Notes & Next Steps
 
 1. **Documentation Use** – Include this file in the submission bundle (`docs/data-blueprint-2025.md`) to demonstrate updated planning artifacts without altering source code.
-2. **Optional Enhancements** – Add ERD visuals (Draw.io/Figma) referencing the tables above and attach to the same docs folder if required by the course rubric.
-3. **Verification** – Align any future migrations in `/scripts` with this blueprint to keep schema drift minimal.
+2. **Verification** – Align any future migrations in `/scripts` with this blueprint to keep schema drift minimal.
